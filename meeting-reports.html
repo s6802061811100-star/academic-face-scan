@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายงานการประชุม & Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{
+      --bg:#f6f8fc;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+      --primary:#4f46e5;--primary2:#7c3aed;--green:#059669;--amber:#d97706;
+      --blue:#2563eb;--red:#dc2626;--shadow:0 8px 28px rgba(15,23,42,.07)
+    }
+    body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .shell{width:min(1280px,calc(100% - 28px));margin:0 auto;padding:24px 0 52px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    .back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#475569;background:#fff;border:1px solid var(--border);padding:10px 15px;border-radius:999px;font-weight:700}
+    .refresh{border:0;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-family:inherit;font-weight:700;cursor:pointer;color:#334155}
+    .hero{background:linear-gradient(135deg,#312e81,#6d28d9);border-radius:26px;padding:28px;color:#fff;box-shadow:var(--shadow);margin-bottom:20px}
+    .hero-row{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;flex-wrap:wrap}
+    .eyebrow{font-size:.8rem;font-weight:800;letter-spacing:.08em;opacity:.8;margin-bottom:8px}
+    h1{font-size:clamp(1.7rem,4vw,2.35rem);line-height:1.2;margin-bottom:8px}
+    .hero p{color:#ddd6fe;max-width:760px;line-height:1.6}
+    .hero-time{font-size:.86rem;color:#c4b5fd}
+    .notice{display:none;margin-bottom:18px;padding:14px 16px;border-radius:14px;font-weight:700;line-height:1.6}
+    .notice.show{display:block}.notice.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+    .notice.info{background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe}
+    .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 3px 14px rgba(15,23,42,.04)}
+    .kpi-icon{font-size:1.5rem;margin-bottom:10px}.kpi-value{font-size:1.65rem;font-weight:800;line-height:1}
+    .kpi-label{font-size:.82rem;color:var(--muted);margin-top:7px;line-height:1.3}
+    .layout{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-bottom:20px}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:0 3px 14px rgba(15,23,42,.04)}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .panel-title{font-size:1.08rem;font-weight:800}.panel-sub{font-size:.8rem;color:var(--muted)}
+    .progress-row{display:grid;grid-template-columns:130px 1fr 44px;gap:10px;align-items:center;margin:13px 0;font-size:.88rem}
+    .track{height:10px;background:#eef2f7;border-radius:999px;overflow:hidden}.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#4f46e5,#8b5cf6)}
+    .activity-list{display:flex;flex-direction:column;gap:10px}
+    .activity{display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid #edf0f5;border-radius:14px;background:#fafbff}
+    .activity strong{display:block;font-size:.9rem}.activity small{color:var(--muted)}
+    .controls{display:grid;grid-template-columns:1fr 210px auto;gap:10px;margin-bottom:16px}
+    input,select{width:100%;border:1px solid #cbd5e1;background:#fff;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:.92rem;outline:none}
+    input:focus,select:focus{border-color:#818cf8;box-shadow:0 0 0 3px #e0e7ff}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-family:inherit;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+    .btn.primary{background:var(--primary);color:#fff}.btn.soft{background:#eef2ff;color:#4338ca}.btn.green{background:#ecfdf5;color:#047857}.btn.gray{background:#f1f5f9;color:#334155}
+    .records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .record{border:1px solid var(--border);border-radius:18px;padding:17px;background:#fff;transition:.2s}
+    .record:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .record-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .record-title{font-size:1rem;font-weight:800;line-height:1.35}.record-id{font-size:.73rem;color:#94a3b8;margin-top:4px}
+    .badge{font-size:.72rem;font-weight:800;border-radius:999px;padding:5px 9px;white-space:nowrap}
+    .b-report{background:#dcfce7;color:#166534}.b-ai{background:#ede9fe;color:#6d28d9}.b-trans{background:#dbeafe;color:#1d4ed8}.b-audio{background:#ffedd5;color:#c2410c}.b-draft{background:#f1f5f9;color:#475569}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:14px 0;font-size:.8rem;color:#64748b}
+    .record-actions{display:flex;flex-wrap:wrap;gap:7px}
+    .empty{text-align:center;color:var(--muted);padding:38px 10px}
+    .api-setup{display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:16px;padding:15px;margin-bottom:18px}
+    .api-setup.show{display:block}.api-row{display:grid;grid-template-columns:1fr auto;gap:9px;margin-top:10px}
+    @media(max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.layout{grid-template-columns:1fr}}
+    @media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.records{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.api-row{grid-template-columns:1fr}.shell{width:min(100% - 18px,1280px)}}
+    @media print{.topbar,.controls,.api-setup,.record-actions,.refresh{display:none!important}.shell{width:100%;padding:0}.hero{box-shadow:none}.record{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <a class="back" href="index.html">← กลับหน้าหลัก</a>
+      <button class="refresh" id="refreshBtn">↻ รีเฟรชข้อมูล</button>
+    </div>
+
+    <section class="hero">
+      <div class="hero-row">
+        <div>
+          <div class="eyebrow">SMART MEETING MANAGEMENT</div>
+          <h1>📊 รายงานการประชุม & Dashboard</h1>
+          <p>ภาพรวมการประชุม การเข้าร่วม การบันทึกเสียง Transcript สรุปด้วย AI และรายงาน Google Docs / PDF</p>
+        </div>
+        <div class="hero-time" id="lastUpdated">กำลังโหลดข้อมูล...</div>
+      </div>
+    </section>
+
+    <div id="notice" class="notice"></div>
+
+    <section class="kpis">
+      <div class="kpi"><div class="kpi-icon">📅</div><div class="kpi-value" id="kMeetings">0</div><div class="kpi-label">การประชุมทั้งหมด</div></div>
+      <div class="kpi"><div class="kpi-icon">📝</div><div class="kpi-value" id="kRegs">0</div><div class="kpi-label">ลงทะเบียนทั้งหมด</div></div>
+      <div class="kpi"><div class="kpi-icon">✅</div><div class="kpi-value" id="kAttendance">0</div><div class="kpi-label">Check-in ที่บันทึก</div></div>
+      <div class="kpi"><div class="kpi-icon">🎙️</div><div class="kpi-value" id="kAudio">0</div><div class="kpi-label">มีไฟล์เสียง</div></div>
+      <div class="kpi"><div class="kpi-icon">🤖</div><div class="kpi-value" id="kAi">0</div><div class="kpi-label">AI Summary สำเร็จ</div></div>
+      <div class="kpi"><div class="kpi-icon">📄</div><div class="kpi-value" id="kReports">0</div><div class="kpi-label">รายงาน Docs / PDF</div></div>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="panel-head">
+          <div><div class="panel-title">ความสมบูรณ์ของเอกสารการประชุม</div><div class="panel-sub">คำนวณจาก MeetingRecords</div></div>
+        </div>
+        <div class="progress-row"><span>🎙️ ไฟล์เสียง</span><div class="track"><div class="fill" id="barAudio"></div></div><strong id="pctAudio">0%</strong></div>
+        <div class="progress-row"><span>📝 Transcript</span><div class="track"><div class="fill" id="barTrans"></div></div><strong id="pctTrans">0%</strong></div>
+        <div class="progress-row"><span>🤖 AI Summary</span><div class="track"><div class="fill" id="barAi"></div></div><strong id="pctAi">0%</strong></div>
+        <div class="progress-row"><span>📄 รายงาน PDF</span><div class="track"><div class="fill" id="barReport"></div></div><strong id="pctReport">0%</strong></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div><div class="panel-title">รายการล่าสุด</div><div class="panel-sub">บันทึกการประชุมล่าสุด</div></div>
+        </div>
+        <div class="activity-list" id="latestList"><div class="empty">กำลังโหลด...</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">คลังรายงานการประชุม</div>
+          <div class="panel-sub" id="recordCountLabel">0 รายการ</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn soft" href="system-health.html">🛡️ System Health</a>
+          <button class="btn gray" onclick="window.print()">🖨️ พิมพ์</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input id="searchInput" placeholder="ค้นหาชื่อประชุม / Meeting ID / Record ID">
+        <select id="statusFilter">
+          <option value="">ทุกสถานะ</option>
+          <option value="REPORT_GENERATED">มีรายงานแล้ว</option>
+          <option value="AI_SUMMARIZED">AI Summary แล้ว</option>
+          <option value="TRANSCRIBED">ถอดเสียงแล้ว</option>
+          <option value="AUDIO_UPLOADED">มีไฟล์เสียง</option>
+        </select>
+        <button class="btn soft" id="exportBtn">⬇️ CSV</button>
+      </div>
+
+      <div class="records" id="recordsGrid">
+        <div class="empty">กำลังโหลดข้อมูล...</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let records=[];
+    let meetings=[];
+    let registrations=[];
+    let attendance=[];
+
+    function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+    function val(obj,...keys){for(const k of keys){if(obj && obj[k]!==undefined && obj[k]!==null && String(obj[k])!=='')return obj[k]}return ''}
+    function arr(v){if(Array.isArray(v))return v;if(Array.isArray(v?.data))return v.data;return []}
+    function fmtDate(v){
+      if(!v)return '-';
+      const d=new Date(v);
+      if(Number.isNaN(d.getTime()))return String(v);
+      return d.toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
+    }
+    function duration(v){const n=Number(v||0);if(!n)return '-';const m=Math.floor(n/60),s=Math.round(n%60);return m?`${m} นาที ${s} วิ`:`${s} วินาที`}
+    function setNotice(type,msg){const el=document.getElementById('notice');el.className=`notice show ${type}`;el.textContent=msg}
+    function clearNotice(){document.getElementById('notice').className='notice'}
+    function statusOf(r){
+      if(val(r,'report_pdf_url','report_doc_url'))return 'REPORT_GENERATED';
+      if(val(r,'ai_summary'))return 'AI_SUMMARIZED';
+      if(val(r,'transcript'))return 'TRANSCRIBED';
+      if(val(r,'audio_file_url'))return 'AUDIO_UPLOADED';
+      return String(val(r,'status')||'DRAFT').toUpperCase();
+    }
+    function badgeInfo(s){
+      if(s==='REPORT_GENERATED')return ['b-report','📄 มีรายงาน'];
+      if(s==='AI_SUMMARIZED')return ['b-ai','🤖 AI Summary'];
+      if(s==='TRANSCRIBED')return ['b-trans','📝 Transcript'];
+      if(s==='AUDIO_UPLOADED')return ['b-audio','🎙️ มีเสียง'];
+      return ['b-draft','รอดำเนินการ'];
+    }
+
+    async function coreApi(action,params={}){
+      if(typeof apiFetch==='function'){
+        try{return await apiFetch(action,params)}catch(e){}
+      }
+      const qs=new URLSearchParams({action,...params});
+      const r=await fetch('/api?'+qs.toString());
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return await r.json();
+    }
+
+    async function recordsGet(){
+      const r=await fetch('/api/records/list',{credentials:'same-origin'});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||j.success!==true){
+        throw new Error(j.message||'โหลด MeetingRecords ไม่สำเร็จ');
+      }
+      return j;
+    }
+
+    async function loadAll(){
+      clearNotice();
+      document.getElementById('lastUpdated').textContent='กำลังโหลดข้อมูล...';
+      const jobs=[
+        coreApi('getMeetings').catch(()=>[]),
+        coreApi('getRegistrations').catch(()=>[]),
+        coreApi('getMeetingAttendance').catch(()=>[])
+      ];
+
+      jobs.push(recordsGet().catch(e=>({success:false,error:e.message,data:[]})));
+
+      const [m,r,a,rec]=await Promise.all(jobs);
+      meetings=arr(m);
+      registrations=arr(r);
+      attendance=arr(a);
+      records=arr(rec);
+
+      if(rec?.success===false)setNotice('error','โหลด MeetingRecords ไม่สำเร็จ: '+(rec.error||rec.message||'Unknown error'));
+
+      render();
+      document.getElementById('lastUpdated').textContent='อัปเดตล่าสุด '+new Date().toLocaleString('th-TH');
+    }
+
+    function render(){
+      const audio=records.filter(r=>!!val(r,'audio_file_url')).length;
+      const trans=records.filter(r=>!!val(r,'transcript')).length;
+      const ai=records.filter(r=>!!val(r,'ai_summary')).length;
+      const reports=records.filter(r=>!!val(r,'report_pdf_url','report_doc_url')).length;
+
+      document.getElementById('kMeetings').textContent=meetings.length;
+      document.getElementById('kRegs').textContent=registrations.length;
+      document.getElementById('kAttendance').textContent=attendance.length;
+      document.getElementById('kAudio').textContent=audio;
+      document.getElementById('kAi').textContent=ai;
+      document.getElementById('kReports').textContent=reports;
+
+      const total=Math.max(records.length,1);
+      setBar('Audio',Math.round(audio/total*100));
+      setBar('Trans',Math.round(trans/total*100));
+      setBar('Ai',Math.round(ai/total*100));
+      setBar('Report',Math.round(reports/total*100));
+
+      renderLatest();
+      renderRecords();
+    }
+
+    function setBar(name,pct){
+      document.getElementById('bar'+name).style.width=pct+'%';
+      document.getElementById('pct'+name).textContent=pct+'%';
+    }
+
+    function renderLatest(){
+      const list=[...records].sort((a,b)=>new Date(val(b,'updated_at','created_at','recorded_at')||0)-new Date(val(a,'updated_at','created_at','recorded_at')||0)).slice(0,5);
+      const el=document.getElementById('latestList');
+      if(!list.length){el.innerHTML='<div class="empty">ยังไม่มี MeetingRecords</div>';return}
+      el.innerHTML=list.map(r=>{
+        const s=statusOf(r),b=badgeInfo(s);
+        return `<div class="activity"><div><strong>${esc(val(r,'meeting_title')||val(r,'meeting_id')||'ไม่ระบุชื่อ')}</strong><small>${esc(val(r,'record_id'))} • ${esc(fmtDate(val(r,'updated_at','created_at','recorded_at')))}</small></div><span class="badge ${b[0]}">${b[1]}</span></div>`;
+      }).join('');
+    }
+
+    function renderRecords(){
+      const q=document.getElementById('searchInput').value.trim().toLowerCase();
+      const sf=document.getElementById('statusFilter').value;
+      let list=[...records].sort((a,b)=>new Date(val(b,'updated_at','created_at','recorded_at')||0)-new Date(val(a,'updated_at','created_at','recorded_at')||0));
+      list=list.filter(r=>{
+        const blob=[val(r,'meeting_title'),val(r,'meeting_id'),val(r,'record_id')].join(' ').toLowerCase();
+        return (!q||blob.includes(q)) && (!sf||statusOf(r)===sf);
+      });
+      document.getElementById('recordCountLabel').textContent=`${list.length} รายการ`;
+      const el=document.getElementById('recordsGrid');
+      if(!list.length){el.innerHTML='<div class="empty">ไม่พบรายงานตามเงื่อนไข</div>';return}
+
+      el.innerHTML=list.map(r=>{
+        const s=statusOf(r),b=badgeInfo(s);
+        const title=val(r,'meeting_title')||val(r,'meeting_id')||'ไม่ระบุชื่อ';
+        const links=[];
+        const audio=val(r,'audio_file_url'),doc=val(r,'report_doc_url'),pdf=val(r,'report_pdf_url');
+        if(audio)links.push(`<a class="btn gray" target="_blank" rel="noopener" href="${esc(audio)}">🎙️ เสียง</a>`);
+        if(doc)links.push(`<a class="btn soft" target="_blank" rel="noopener" href="${esc(doc)}">📝 Docs</a>`);
+        if(pdf)links.push(`<a class="btn green" target="_blank" rel="noopener" href="${esc(pdf)}">📄 PDF</a>`);
+        return `<article class="record">
+          <div class="record-top">
+            <div><div class="record-title">${esc(title)}</div><div class="record-id">${esc(val(r,'record_id'))}</div></div>
+            <span class="badge ${b[0]}">${b[1]}</span>
+          </div>
+          <div class="meta">
+            <div>📅 ${esc(fmtDate(val(r,'recorded_at','created_at')))}</div>
+            <div>⏱️ ${esc(duration(val(r,'duration_seconds')))}</div>
+            <div>🔗 ${esc(val(r,'meeting_id')||'-')}</div>
+            <div>👤 ${esc(val(r,'created_by')||'-')}</div>
+          </div>
+          <div class="record-actions">${links.join('')||'<span style="color:#94a3b8;font-size:.82rem">ยังไม่มีไฟล์รายงาน</span>'}</div>
+        </article>`;
+      }).join('');
+    }
+
+    function exportCsv(){
+      const rows=[['record_id','meeting_id','meeting_title','status','recorded_at','duration_seconds','audio_file_url','report_doc_url','report_pdf_url']];
+      records.forEach(r=>rows.push([
+        val(r,'record_id'),val(r,'meeting_id'),val(r,'meeting_title'),statusOf(r),
+        val(r,'recorded_at'),val(r,'duration_seconds'),val(r,'audio_file_url'),
+        val(r,'report_doc_url'),val(r,'report_pdf_url')
+      ]));
+      const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`meeting_reports_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);
+    }
+
+    document.getElementById('refreshBtn').onclick=loadAll;
+    document.getElementById('searchInput').oninput=renderRecords;
+    document.getElementById('statusFilter').onchange=renderRecords;
+    document.getElementById('exportBtn').onclick=exportCsv;
+    window.addEventListener('DOMContentLoaded',loadAll);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ห้องประชุมอัจฉริยะ AI (Smart Meeting Cockpit - v4, v5, v6)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --accent: #ec4899;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 10% 10%, #201335 0%, #0b0f19 70%, #050811 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 60px;
+    }
+
+    /* Navbar */
+    .navbar {
+      width: 100%;
+      max-width: 1200px;
+      padding: 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-icon {
+      font-size: 24px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-btn {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Meeting Context Bar */
+    .context-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      backdrop-filter: blur(10px);
+    }
+    .context-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .meeting-select {
+      background: #111827;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      min-width: 280px;
+    }
+
+    /* 2-Column Split Layout */
+    .cockpit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Left Panel: Recorder & Transcription */
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(12px);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+    .panel-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* v4 Recorder Area */
+    .recorder-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .timer-display {
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rec-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ef4444;
+      opacity: 0.3;
+    }
+    .rec-dot.active {
+      opacity: 1;
+      animation: blink 1s infinite alternate;
+      box-shadow: 0 0 12px #ef4444;
+    }
+    @keyframes blink { from { opacity: 0.3; } to { opacity: 1; } }
+
+    /* Waveform Canvas */
+    #waveCanvas {
+      width: 100%;
+      height: 70px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    /* Recorder Controls */
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-ctrl {
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-rec-start {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    }
+    .btn-rec-pause {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .btn-rec-stop {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .btn-ctrl:hover { transform: translateY(-1px); }
+
+    /* Audio Playback Element */
+    #audioPlayback {
+      width: 100%;
+      margin-top: 6px;
+      display: none;
+    }
+
+    /* v5 Transcription Area */
+    .transcription-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .speech-status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+    }
+
+    .transcript-box {
+      width: 100%;
+      min-height: 220px;
+      max-height: 340px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+    }
+    .transcript-box:focus { border-color: var(--primary); }
+
+    .speaker-quick-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .tag-speaker {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .tag-speaker:hover { background: rgba(139, 92, 246, 0.2); border-color: var(--primary); color: #fff; }
+
+    /* Right Panel: v6 Gemini AI Summary */
+    .ai-hero {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.12));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-ai-gen {
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 18px rgba(139, 92, 246, 0.4);
+      transition: all 0.2s ease;
+    }
+    .btn-ai-gen:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(139, 92, 246, 0.5); }
+    .btn-ai-gen:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* AI Summary Output Sections */
+    .summary-content {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .summary-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .summary-card h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #a78bfa;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .summary-card p { font-size: 0.9rem; color: #e2e8f0; line-height: 1.5; }
+    .summary-card ul { padding-left: 20px; font-size: 0.88rem; color: #cbd5e1; line-height: 1.6; }
+
+    /* Action Items Table */
+    .action-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+    .action-table th, .action-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .action-table th { color: var(--muted); font-weight: 600; }
+    .priority-high { color: #f87171; font-weight: 700; }
+    .priority-med  { color: #fcd34d; }
+    .priority-low  { color: #93c5fd; }
+
+    /* Export actions footer */
+    .export-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 14px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .cockpit-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="brand-icon">🎙️</div>
+      <div>
+        <div style="font-weight:700; font-size:1.1rem;">Smart Meeting Cockpit</div>
+        <div style="font-size:0.75rem; color:#94a3b8;">Audio Recorder (v4), Transcription (v5) &amp; Gemini AI (v6)</div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="admin.html" class="nav-btn" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #c7d2fe;">⚙️ เมนูผู้ดูแลระบบ</a>
+      <a href="meetings.html" class="nav-btn">📅 จัดการประชุม</a>
+      <a href="dashboard.html" class="nav-btn">📊 แดชบอร์ด</a>
+      <a href="config.html" class="nav-btn">🔧 ตั้งค่าระบบ</a>
+      <a href="index.html" class="nav-btn">🏠 หน้าหลักผู้ใช้</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Top Context Selector -->
+    <div class="context-bar">
+      <div class="context-left">
+        <label style="font-size:0.9rem; font-weight:600; color:#cbd5e1;">🎯 การประชุมปัจจุบัน:</label>
+        <select id="meetingSelect" class="meeting-select" onchange="onMeetingSelectChange()">
+          <option value="">-- กำลังโหลดรายการประชุม --</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="nav-btn" onclick="saveMinutesToMeeting()">💾 บันทึกรายงานเข้าสู่การประชุม</button>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Cockpit -->
+    <div class="cockpit-grid">
+      <!-- LEFT: v4 Recorder & v5 Live Transcription -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span>🎙️ บันทึกเสียงการประชุม (v4)</span>
+          </h2>
+          <span style="font-size:0.8rem; color:var(--muted);" id="recMimeType">WebM / WAV Audio</span>
+        </div>
+
+        <!-- Recorder Area -->
+        <div class="recorder-box">
+          <div class="timer-display">
+            <span class="rec-dot" id="recDot"></span>
+            <span id="timerText">00:00:00</span>
+          </div>
+
+          <!-- Waveform Canvas -->
+          <canvas id="waveCanvas"></canvas>
+
+          <!-- Controls -->
+          <div class="controls-row">
+            <button class="btn-ctrl btn-rec-start" id="btnStartRec" onclick="startRecording()">
+              <span>🔴 เริ่มอัดเสียง</span>
+            </button>
+            <button class="btn-ctrl btn-rec-pause" id="btnPauseRec" onclick="pauseRecording()" style="display:none;">
+              <span>⏸️ พัก</span>
+            </button>
+            <button class="btn-ctrl btn-rec-stop" id="btnStopRec" onclick="stopRecording()" style="display:none;">
+              <span>⏹️ หยุดอัด</span>
+            </button>
+            <label class="nav-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <span>📁 อัปโหลดไฟล์เสียง</span>
+              <input type="file" id="audioFileInput" accept="audio/*" style="display:none;" onchange="handleAudioUpload(event)">
+            </label>
+          </div>
+
+          <audio id="audioPlayback" controls></audio>
+        </div>
+
+        <!-- v5 Speech Transcription Area -->
+        <div class="transcription-header">
+          <h3 style="font-size:1rem; font-weight:700; color:#cbd5e1;">📝 ถอดความเสียง (Transcription - v5)</h3>
+          <div class="speech-status">
+            <span class="live-dot"></span>
+            <span id="speechStatusText">Web Speech API พร้อมใช้งาน (ภาษาไทย)</span>
+          </div>
+        </div>
+
+        <!-- Quick Speaker Tags -->
+        <div class="speaker-quick-tags">
+          <span style="font-size:0.75rem; color:var(--muted);">แท็กผู้พูด:</span>
+          <button class="tag-speaker" onclick="insertSpeaker('[ประธาน]')">[ประธาน]</button>
+          <button class="tag-speaker" onclick="insertSpeaker('[สมชาย]')">[สมชาย]</button>
+          <button class="tag-speaker" onclick="insertSpeaker('[วิภาดา]')">[วิภาดา]</button>
+          <button class="tag-speaker" onclick="insertSpeaker('[กิตติศักดิ์]')">[กิตติศักดิ์]</button>
+          <button class="tag-speaker" onclick="insertSpeaker('[ผู้ร่วมประชุม]')">[ผู้ร่วมประชุม]</button>
+        </div>
+
+        <!-- Transcript Textarea -->
+        <textarea id="transcriptText" class="transcript-box" placeholder="บทสนทนาจากการประชุมจะปรากฏที่นี่แบบเรียลไทม์ หรือพิมพ์/แก้ไขเพิ่มเติมได้โดยตรง..."></textarea>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:6px;">
+            <button class="nav-btn" style="font-size:0.8rem;" onclick="copyTranscript()">📋 คัดลอกข้อความ</button>
+            <button class="nav-btn" style="font-size:0.8rem;" onclick="clearTranscript()">🗑️ ล้าง</button>
+          </div>
+          <button class="nav-btn" style="font-size:0.8rem; background:rgba(139,92,246,0.15); color:#c4b5fd;" onclick="runDeepAiTranscribe()">
+            ✨ ใช้ Gemini AI ถอดเสียงจากไฟล์
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT: v6 Gemini AI Meeting Minutes & Summary -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span>🤖 สรุปรายงานการประชุม AI (Gemini v6)</span>
+          </h2>
+          <span style="font-size:0.8rem; color:#a78bfa;">Powered by Gemini 3.7 Flash</span>
+        </div>
+
+        <!-- AI Generator Action Box -->
+        <div class="ai-hero">
+          <div>
+            <div style="font-weight:700; font-size:0.95rem; color:#fff;">วิเคราะห์และสร้างรายงานการประชุม</div>
+            <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">สรุปประเด็น มติที่ประชุม และตาราง Action Items อัตโนมัติ</div>
+          </div>
+          <button class="btn-ai-gen" id="btnGenSummary" onclick="generateAiSummary()">
+            <span>✨ สร้างสรุปด้วย AI</span>
+          </button>
+        </div>
+
+        <!-- AI Output Cards -->
+        <div class="summary-content" id="summaryOutput">
+          <!-- 1. Executive Summary -->
+          <div class="summary-card">
+            <h3>📑 สรุปภาพรวมผู้บริหาร (Executive Summary)</h3>
+            <p id="sumExecutive">กดปุ่ม "สร้างสรุปด้วย AI" ด้านบนเพื่อเริ่มวิเคราะห์เนื้อหาการประชุมผ่านโมเดล Gemini</p>
+          </div>
+
+          <!-- 2. Key Points -->
+          <div class="summary-card">
+            <h3>💡 ประเด็นสำคัญที่หารือ (Key Discussion Points)</h3>
+            <ul id="sumKeyPoints">
+              <li>ระบบตรวจจับใบหน้าและยืนยันพิกัด GPS</li>
+              <li>การบันทึกเสียงและถอดเสียงแบบเรียลไทม์</li>
+              <li>การเชื่อมต่อระบบสรุปรายงานอัตโนมัติ</li>
+            </ul>
+          </div>
+
+          <!-- 3. Decisions -->
+          <div class="summary-card">
+            <h3>⚖️ มติที่ประชุม (Decisions Made)</h3>
+            <ul id="sumDecisions">
+              <li>อนุมัติเปิดใช้งานระบบเวอร์ชัน v1-v7 ทั่วทั้งองค์กร</li>
+            </ul>
+          </div>
+
+          <!-- 4. Action Items -->
+          <div class="summary-card">
+            <h3>📋 ตารางงานที่ต้องทำ (Action Items &amp; Next Steps)</h3>
+            <table class="action-table">
+              <thead>
+                <tr>
+                  <th>งาน (Task)</th>
+                  <th>ผู้รับผิดชอบ</th>
+                  <th>กำหนดส่ง</th>
+                  <th>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="sumActionItems">
+                <tr>
+                  <td>ปรับแต่ง UI และทดสอบระบบ</td>
+                  <td>ณิชาภา (Designer)</td>
+                  <td>28 ส.ค.</td>
+                  <td><span class="priority-high">In Progress</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 5. Sentiment & Next -->
+          <div class="summary-card">
+            <h3>🌟 บรรยากาศและการนัดหมายครั้งถัดไป</h3>
+            <p id="sumSentiment">บรรยากาศการประชุมเป็นไปอย่างราบรื่นและสร้างสรรค์</p>
+          </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="export-row">
+          <button class="nav-btn" onclick="exportPrintPdf()">🖨️ พิมพ์ / PDF</button>
+          <button class="nav-btn" onclick="copyAiMinutes()">📋 คัดลอกรายงาน Markdown</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let allMeetings = [];
+    let currentMeeting = null;
+    let currentAiSummary = null;
+
+    // v4 Recorder variables
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioBlob = null;
+    let recTimerInterval = null;
+    let recSeconds = 0;
+    let audioCtx = null;
+    let analyser = null;
+    let animationId = null;
+
+    // v5 Speech Recognition
+    let recognition = null;
+    let isLiveSpeechActive = false;
+
+    async function init() {
+      await loadMeetings();
+      setupSpeechRecognition();
+      setupWaveCanvas();
+    }
+
+    async function loadMeetings() {
+      try {
+        const list = await apiFetch('getMeetings');
+        allMeetings = Array.isArray(list) ? list : [];
+        const select = document.getElementById('meetingSelect');
+        select.innerHTML = '';
+
+        if (allMeetings.length === 0) {
+          select.innerHTML = '<option value="">ยังไม่มีการประชุม</option>';
+          return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('meetingId');
+
+        allMeetings.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = `${m.title} (${m.date})`;
+          if (targetId && m.id === targetId) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        currentMeeting = allMeetings.find(m => m.id === select.value) || allMeetings[0];
+        loadMeetingDataIntoUi();
+      } catch (err) {
+        showToast('โหลดรายการประชุมไม่สำเร็จ', 'error');
+      }
+    }
+
+    function onMeetingSelectChange() {
+      const id = document.getElementById('meetingSelect').value;
+      currentMeeting = allMeetings.find(m => m.id === id);
+      loadMeetingDataIntoUi();
+    }
+
+    function loadMeetingDataIntoUi() {
+      if (!currentMeeting) return;
+      if (currentMeeting.transcript) {
+        document.getElementById('transcriptText').value = currentMeeting.transcript;
+      }
+      if (currentMeeting.aiSummary) {
+        renderAiSummary(currentMeeting.aiSummary);
+      }
+    }
+
+    // ==========================================
+    // v4 Recorder Implementation
+    // ==========================================
+    function setupWaveCanvas() {
+      const canvas = document.getElementById('waveCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.clientWidth || 500;
+      canvas.height = 70;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+
+        // AudioContext for Waveform Visualizer
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        drawWaveform();
+
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+          audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const playback = document.getElementById('audioPlayback');
+          playback.src = audioUrl;
+          playback.style.display = 'block';
+          showToast('บันทึกเสียงเสร็จสิ้น พร้อมเล่นและวิเคราะห์ AI', 'success');
+        };
+
+        mediaRecorder.start(1000);
+
+        // UI Updates
+        document.getElementById('btnStartRec').style.display = 'none';
+        document.getElementById('btnPauseRec').style.display = 'inline-flex';
+        document.getElementById('btnStopRec').style.display = 'inline-flex';
+        document.getElementById('recDot').classList.add('active');
+
+        recSeconds = 0;
+        clearInterval(recTimerInterval);
+        recTimerInterval = setInterval(updateRecTimer, 1000);
+
+        // Start Live Speech Recognition alongside
+        startSpeechRecognition();
+      } catch (err) {
+        showToast('ไม่สามารถเข้าถึงไมโครโฟนได้: ' + err.message, 'error');
+      }
+    }
+
+    function pauseRecording() {
+      if (!mediaRecorder) return;
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        document.getElementById('btnPauseRec').innerHTML = '<span>▶️ อัดต่อ</span>';
+        document.getElementById('recDot').classList.remove('active');
+        clearInterval(recTimerInterval);
+      } else if (mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        document.getElementById('btnPauseRec').innerHTML = '<span>⏸️ พัก</span>';
+        document.getElementById('recDot').classList.add('active');
+        recTimerInterval = setInterval(updateRecTimer, 1000);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      }
+      clearInterval(recTimerInterval);
+      document.getElementById('btnStartRec').style.display = 'inline-flex';
+      document.getElementById('btnPauseRec').style.display = 'none';
+      document.getElementById('btnStopRec').style.display = 'none';
+      document.getElementById('recDot').classList.remove('active');
+      cancelAnimationFrame(animationId);
+
+      stopSpeechRecognition();
+    }
+
+    function updateRecTimer() {
+      recSeconds++;
+      const h = String(Math.floor(recSeconds / 3600)).padStart(2, '0');
+      const m = String(Math.floor((recSeconds % 3600) / 60)).padStart(2, '0');
+      const s = String(recSeconds % 60).padStart(2, '0');
+      document.getElementById('timerText').textContent = `${h}:${m}:${s}`;
+    }
+
+    function drawWaveform() {
+      const canvas = document.getElementById('waveCanvas');
+      const ctx = canvas.getContext('2d');
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function render() {
+        animationId = requestAnimationFrame(render);
+        analyser.getByteFrequencyData(dataArray);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = (canvas.width / bufferLength) * 2.5;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = (dataArray[i] / 255) * canvas.height;
+          const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+          gradient.addColorStop(0, '#8b5cf6');
+          gradient.addColorStop(1, '#ec4899');
+
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+          x += barWidth + 1;
+        }
+      }
+      render();
+    }
+
+    function handleAudioUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      audioBlob = file;
+      const url = URL.createObjectURL(file);
+      const playback = document.getElementById('audioPlayback');
+      playback.src = url;
+      playback.style.display = 'block';
+      showToast(`อัปโหลดไฟล์เสียง "${file.name}" เรียบร้อย`, 'success');
+    }
+
+    // ==========================================
+    // v5 Speech Recognition
+    // ==========================================
+    function setupSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        document.getElementById('speechStatusText').textContent = 'เบราว์เซอร์ไม่รองรับ Live Web Speech (ใช้ปุ่ม Gemini AI ถอดเสียงแทนได้)';
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'th-TH';
+
+      recognition.onresult = (event) => {
+        const transcriptBox = document.getElementById('transcriptText');
+        const now = new Date();
+        const timeBadge = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}]`;
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const text = event.results[i][0].transcript.trim();
+            if (text) {
+              transcriptBox.value += (transcriptBox.value ? '\n' : '') + `${timeBadge} [ผู้ร่วมประชุม]: ${text}`;
+              transcriptBox.scrollTop = transcriptBox.scrollHeight;
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn('Speech recognition error:', e.error);
+      };
+    }
+
+    function startSpeechRecognition() {
+      if (recognition && !isLiveSpeechActive) {
+        try {
+          recognition.start();
+          isLiveSpeechActive = true;
+        } catch (e) {}
+      }
+    }
+
+    function stopSpeechRecognition() {
+      if (recognition && isLiveSpeechActive) {
+        try {
+          recognition.stop();
+          isLiveSpeechActive = false;
+        } catch (e) {}
+      }
+    }
+
+    function insertSpeaker(tag) {
+      const box = document.getElementById('transcriptText');
+      const now = new Date();
+      const timeBadge = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}]`;
+      box.value += (box.value ? '\n' : '') + `${timeBadge} ${tag}: `;
+      box.focus();
+    }
+
+    function copyTranscript() {
+      const text = document.getElementById('transcriptText').value;
+      if (!text) return showToast('ยังไม่มีข้อความ', 'warning');
+      navigator.clipboard.writeText(text);
+      showToast('คัดลอกบทสนทนาเรียบร้อย', 'success');
+    }
+
+    function clearTranscript() {
+      if (confirm('ต้องการล้างข้อความถอดเสียงหรือไม่?')) {
+        document.getElementById('transcriptText').value = '';
+      }
+    }
+
+    async function runDeepAiTranscribe() {
+      if (!audioBlob) {
+        return showToast('กรุณาอัดเสียงหรืออัปโหลดไฟล์เสียงก่อน', 'warning');
+      }
+
+      showToast('กำลังส่งไฟล์เสียงให้ Gemini AI ถอดความ...', 'info');
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result;
+          const res = await fetch('/api/ai/transcribe-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audioData: base64Audio,
+              mimeType: audioBlob.type || 'audio/webm',
+              meetingContext: currentMeeting ? currentMeeting.title : ''
+            })
+          });
+          const data = await res.json();
+          if (data.transcript) {
+            document.getElementById('transcriptText').value = data.transcript;
+            showToast('ถอดเสียงสำเร็จด้วย Gemini AI', 'success');
+          }
+        };
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการถอดเสียง AI', 'error');
+      }
+    }
+
+    // ==========================================
+    // v6 Gemini AI Meeting Summary
+    // ==========================================
+    async function generateAiSummary() {
+      const transcript = document.getElementById('transcriptText').value.trim();
+      const btn = document.getElementById('btnGenSummary');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ กำลังวิเคราะห์ด้วย Gemini AI...</span>';
+      showToast('Gemini AI กำลังวิเคราะห์และสร้างรายงานการประชุม...', 'info');
+
+      try {
+        const payload = {
+          meetingTitle: currentMeeting ? currentMeeting.title : 'การประชุมทั่วไป',
+          agenda: currentMeeting ? currentMeeting.agenda : '',
+          transcript: transcript || (currentMeeting ? currentMeeting.agenda : 'ประชุมตามวาระงาน'),
+          attendees: currentMeeting ? currentMeeting.participants : []
+        };
+
+        const res = await fetch('/api/ai/summarize-meeting', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success && data.summary) {
+          currentAiSummary = data.summary;
+          renderAiSummary(data.summary);
+          showToast('สร้างสรุปรายงานการประชุม AI สำเร็จ!', 'success');
+        } else {
+          showToast('ไม่สามารถสร้างสรุป AI ได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการเรียก Gemini AI: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✨ สร้างสรุปด้วย AI</span>';
+      }
+    }
+
+    function renderAiSummary(summary) {
+      currentAiSummary = summary;
+      document.getElementById('sumExecutive').textContent = summary.executiveSummary || '-';
+
+      // Key points
+      const kpList = document.getElementById('sumKeyPoints');
+      kpList.innerHTML = (summary.keyPoints || []).map(p => `<li>${escapeHtml(p)}</li>`).join('');
+
+      // Decisions
+      const decList = document.getElementById('sumDecisions');
+      decList.innerHTML = (summary.decisions || []).map(d => `<li>${escapeHtml(d)}</li>`).join('');
+
+      // Action items
+      const actBody = document.getElementById('sumActionItems');
+      if (summary.actionItems && summary.actionItems.length > 0) {
+        actBody.innerHTML = summary.actionItems.map(item => `
+          <tr>
+            <td style="font-weight:600;">${escapeHtml(item.task)}</td>
+            <td style="color:#cbd5e1;">${escapeHtml(item.assignee || 'ทีม')}</td>
+            <td style="color:var(--muted);">${escapeHtml(item.deadline || '-')}</td>
+            <td><span class="${item.priority === 'High' ? 'priority-high' : 'priority-med'}">${escapeHtml(item.priority || 'Medium')}</span></td>
+          </tr>
+        `).join('');
+      } else {
+        actBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">ไม่มีภารกิจคั่งค้าง</td></tr>';
+      }
+
+      document.getElementById('sumSentiment').innerHTML = `
+        <strong>บรรยากาศ:</strong> ${escapeHtml(summary.sentiment || 'ราบรื่น')}<br>
+        <strong>นัดหมายถัดไป:</strong> ${escapeHtml(summary.nextMeeting || 'ตามกำหนดการ')}
+      `;
+    }
+
+    async function saveMinutesToMeeting() {
+      if (!currentMeeting) return showToast('กรุณาเลือกการประชุมเป้าหมาย', 'warning');
+      const transcript = document.getElementById('transcriptText').value;
+
+      try {
+        const res = await apiFetch('saveMeetingMinutes', {
+          meetingId: currentMeeting.id,
+          transcript,
+          aiSummary: currentAiSummary
+        }, 'POST');
+
+        if (res.success) {
+          showToast('บันทึกรายงานการประชุมและสรุป AI เรียบร้อย', 'success');
+        }
+      } catch (err) {
+        showToast('ไม่สามารถบันทึกข้อมูลได้', 'error');
+      }
+    }
+
+    function exportPrintPdf() {
+      window.print();
+    }
+
+    function copyAiMinutes() {
+      if (!currentAiSummary) return showToast('ยังไม่มีข้อมูลสรุป AI', 'warning');
+      const md = `
+# รายงานการประชุม: ${currentMeeting ? currentMeeting.title : 'รายงานการประชุม'}
+**วันที่:** ${currentMeeting ? currentMeeting.date : '-'} | **สถานที่:** ${currentMeeting ? currentMeeting.room : '-'}
+
+## 1. สรุปภาพรวมผู้บริหาร
+${currentAiSummary.executiveSummary || ''}
+
+## 2. ประเด็นสำคัญที่หารือ
+${(currentAiSummary.keyPoints || []).map(p => `- ${p}`).join('\n')}
+
+## 3. มติที่ประชุม
+${(currentAiSummary.decisions || []).map(d => `- ${d}`).join('\n')}
+
+## 4. Action Items & งานที่ต้องทำ
+${(currentAiSummary.actionItems || []).map(a => `- [ ] **${a.task}** | ผู้รับผิดชอบ: ${a.assignee} | กำหนดส่ง: ${a.deadline} | ความสำคัญ: ${a.priority}`).join('\n')}
+
+## 5. การนัดหมายครั้งถัดไป
+${currentAiSummary.nextMeeting || '-'}
+      `.trim();
+
+      navigator.clipboard.writeText(md);
+      showToast('คัดลอกรายงานรูปแบบ Markdown เรียบร้อย', 'success');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

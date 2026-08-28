@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Health — Smart Meeting</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Sarabun',sans-serif;background:#f6f8fc;color:#0f172a;min-height:100vh}
+    .shell{width:min(1050px,calc(100% - 24px));margin:0 auto;padding:24px 0 50px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px}
+    .btn{border:1px solid #e2e8f0;background:#fff;border-radius:12px;padding:10px 14px;font-family:inherit;font-weight:800;cursor:pointer;text-decoration:none;color:#334155}
+    .hero{background:linear-gradient(135deg,#0f172a,#312e81);color:#fff;border-radius:24px;padding:26px;margin-bottom:18px}
+    .hero h1{font-size:1.8rem;margin-bottom:6px}.hero p{color:#cbd5e1;line-height:1.55}
+    .overall{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;margin-bottom:16px}
+    .dot{width:16px;height:16px;border-radius:50%}.ok{background:#10b981}.warning{background:#f59e0b}.error{background:#ef4444}
+    .overall strong{font-size:1.08rem}.muted{color:#64748b}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+    .card-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+    .card h3{font-size:1rem}.status{font-size:.75rem;font-weight:800;padding:5px 9px;border-radius:999px}
+    .s-ok{background:#dcfce7;color:#166534}.s-warning{background:#fef3c7;color:#92400e}.s-error{background:#fee2e2;color:#991b1b}
+    .message{color:#475569;margin-top:10px;line-height:1.55;font-size:.9rem}
+    .recommend{margin-top:18px;background:#fff7ed;border:1px solid #fed7aa;border-radius:18px;padding:18px}
+    .recommend h3{color:#9a3412;margin-bottom:8px}.recommend li{margin:7px 0 7px 20px;color:#7c2d12}
+    .loading{text-align:center;padding:40px;color:#64748b}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="top">
+      <a class="btn" href="admin.html">← กลับ Admin</a>
+      <button class="btn" id="refreshBtn">↻ ตรวจสอบใหม่</button>
+    </div>
+    <section class="hero">
+      <h1>🛡️ System Health & Production Check</h1>
+      <p>ตรวจความพร้อมของ Smart Meeting ก่อนใช้งานจริง โดยไม่แสดง Secret, API Key หรือ Token</p>
+    </section>
+    <div id="content" class="loading">กำลังตรวจสอบระบบ...</div>
+  </main>
+
+<script>
+  const content=document.getElementById('content');
+  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function label(status){return status==='ok'?'พร้อม':status==='warning'?'ควรตรวจสอบ':'มีปัญหา'}
+
+  async function loadHealth(){
+    content.className='loading';
+    content.textContent='กำลังตรวจสอบระบบ...';
+
+    try{
+      const r=await fetch('/api/production/health',{credentials:'same-origin'});
+      const j=await r.json();
+
+      if(r.status===401){
+        location.href='admin-login.html?next=system-health.html';
+        return;
+      }
+
+      const checks=Array.isArray(j.checks)?j.checks:[];
+      const overall=j.overall||'error';
+      const recs=Array.isArray(j.recommendations)?j.recommendations:[];
+
+      content.className='';
+      content.innerHTML=`
+        <div class="overall">
+          <span class="dot ${esc(overall)}"></span>
+          <div>
+            <strong>${overall==='ok'?'ระบบพร้อมใช้งานจริง':overall==='warning'?'ระบบใช้งานได้ แต่ยังมีคำแนะนำก่อน Publish':'ยังมีจุดที่ต้องแก้ก่อนใช้งานจริง'}</strong>
+            <div class="muted">ตรวจล่าสุด ${new Date(j.timestamp||Date.now()).toLocaleString('th-TH')}</div>
+          </div>
+        </div>
+        <div class="grid">
+          ${checks.map(c=>`
+            <section class="card">
+              <div class="card-head">
+                <h3>${esc(c.label)}</h3>
+                <span class="status s-${esc(c.status)}">${label(c.status)}</span>
+              </div>
+              <div class="message">${esc(c.message)}</div>
+            </section>
+          `).join('')}
+        </div>
+        ${recs.length?`
+          <section class="recommend">
+            <h3>⚠️ แนะนำก่อนใช้งานจริง</h3>
+            <ul>${recs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+          </section>
+        `:''}
+      `;
+    }catch(e){
+      content.className='';
+      content.innerHTML=`<div class="overall"><span class="dot error"></span><div><strong>ตรวจสอบระบบไม่สำเร็จ</strong><div class="muted">${esc(e.message||e)}</div></div></div>`;
+    }
+  }
+
+  document.getElementById('refreshBtn').onclick=loadHealth;
+  loadHealth();
+</script>
+</body>
+</html>

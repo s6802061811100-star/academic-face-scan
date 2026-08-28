@@ -1,0 +1,245 @@
+{
+  "gpsConfig": {
+    "lat": 13.8198,
+    "lng": 100.5144,
+    "radius": 500,
+    "officeName": "สำนักงานใหญ่ (KMUTNB HQ)"
+  },
+  "knownFaces": [],
+  "attendanceLogs": [
+    {
+      "id": "att_1",
+      "name": "สมชาย ใจดี (HR Lead)",
+      "time": "08:24:10",
+      "date": "26/8/2569",
+      "lat": 13.8199,
+      "lng": 100.5142,
+      "mapLink": "https://www.google.com/maps?q=13.8199,100.5142",
+      "status": "on_time",
+      "type": "work_checkin",
+      "distance": 18,
+      "timestamp": "2026-08-26T08:24:10.000Z"
+    },
+    {
+      "id": "att_2",
+      "name": "วิภาดา รักเรียน (Tech Lead)",
+      "time": "08:45:30",
+      "date": "26/8/2569",
+      "lat": 13.8197,
+      "lng": 100.5145,
+      "mapLink": "https://www.google.com/maps?q=13.8197,100.5145",
+      "status": "on_time",
+      "type": "work_checkin",
+      "distance": 15,
+      "timestamp": "2026-08-26T08:45:30.000Z"
+    },
+    {
+      "id": "att_3",
+      "name": "กิตติศักดิ์ พัฒนา (Product Manager)",
+      "time": "09:05:12",
+      "date": "26/8/2569",
+      "lat": 13.8201,
+      "lng": 100.514,
+      "mapLink": "https://www.google.com/maps?q=13.8201,100.5140",
+      "status": "late",
+      "type": "work_checkin",
+      "distance": 35,
+      "timestamp": "2026-08-26T09:05:12.000Z"
+    }
+  ],
+  "meetings": [
+    {
+      "id": "mtg_1",
+      "title": "การประชุมวางแผนพัฒนาระบบ AI & Face Recognition Q3",
+      "agenda": "1. สรุปผลการทดสอบระบบ Face Scan & GPS\n2. การเชื่อมต่อ Gemini AI สำหรับถอดเสียงและสรุปการประชุม\n3. กำหนดการเปิดใช้งานระบบทั่วทั้งองค์กร",
+      "date": "2026-08-27",
+      "startTime": "09:30",
+      "endTime": "11:00",
+      "room": "ห้องประชุมใหญ่ อาคาร 1 ชั้น 4 (Boardroom)",
+      "locationType": "hybrid",
+      "gpsRequired": true,
+      "gpsLat": 13.8198,
+      "gpsLng": 100.5144,
+      "gpsRadius": 300,
+      "organizer": "สมชาย ใจดี (HR Lead)",
+      "department": "เทคโนโลยีและวิศวกรรม (Tech)",
+      "participants": [
+        "สมชาย ใจดี (HR Lead)",
+        "วิภาดา รักเรียน (Tech Lead)",
+        "กิตติศักดิ์ พัฒนา (Product Manager)",
+        "ณิชาภา สุขสมบัติ (Designer)"
+      ],
+      "status": "scheduled",
+      "transcript": "00:01 [สมชาย]: สวัสดีครับทุกท่าน วันนี้เราประชุมเรื่องแผนพัฒนาฟีเจอร์ AI Transcript และ Face Attendance\n00:45 [วิภาดา]: ระบบ Face Scan ตรวจจับได้แม่นยำ 98.5% และความเร็วในการจำแนกใบหน้าต่ำกว่า 200ms\n01:30 [กิตติศักดิ์]: ฝั่ง Product เสนอให้เพิ่มระบบสรุปการประชุม AI ด้วย Gemini เพื่อสร้าง Action Items อัตโนมัติ\n02:15 [ณิชาภา]: ออกแบบหน้า UI ใหม่เรียบร้อยแล้ว รองรับทั้ง Desktop, Tablet และ Mobile เต็มรูปแบบ\n03:00 [สมชาย]: สรุปมติอนุมัติ Deploy เวอร์ชัน v1-v7 ภายในสัปดาห์นี้ครับ",
+      "aiSummary": {
+        "executiveSummary": "การประชุมเพื่อวางแผนการเปิดตัวระบบ Face Recognition & GPS ร่วมกับฟังก์ชัน AI Transcription และ Smart Meeting Assistant ผลการทดสอบโมเดลมีความแม่นยำสูงและพร้อมขยายผลใช้งานจริง",
+        "keyPoints": [
+          "ระบบตรวจจับใบหน้ามีความแม่นยำ 98.5% พร้อมระบบยืนยันพิกัด GPS อัตโนมัติ",
+          "เพิ่มฟังก์ชันบันทึกเสียงและถอดเสียงภาษาไทย/อังกฤษแบบเรียลไทม์",
+          "ผสานพลัง Gemini AI สรุปสาระสำคัญและสร้าง Action Items โดยอัตโนมัติ"
+        ],
+        "decisions": [
+          "อนุมัติเปิดใช้งานระบบเวอร์ชันเต็ม (v1-v7) ทั่วทั้งองค์กร",
+          "กำหนดให้อุปกรณ์หน้าห้องประชุมทุกห้องติดตั้งหน้าจอสำหรับสแกนใบหน้าเข้าประชุม"
+        ],
+        "actionItems": [
+          {
+            "task": "ปรับแต่ง UI Responsive และทดสอบระบบเสียงในห้องประชุม",
+            "assignee": "ณิชาภา สุขสมบัติ (Designer)",
+            "deadline": "2026-08-28",
+            "priority": "High",
+            "status": "In Progress"
+          },
+          {
+            "task": "เชื่อมต่อ Gemini API endpoint สรุปเนื้อหาและถอดความภาษาไทย",
+            "assignee": "วิภาดา รักเรียน (Tech Lead)",
+            "deadline": "2026-08-29",
+            "priority": "High",
+            "status": "Completed"
+          },
+          {
+            "task": "จัดอบรมการใช้งานระบบสำหรับพนักงานทุกแผนก",
+            "assignee": "สมชาย ใจดี (HR Lead)",
+            "deadline": "2026-08-30",
+            "priority": "Medium",
+            "status": "Pending"
+          }
+        ],
+        "sentiment": "บรรยากาศเป็นไปในเชิงบวก ทีมงานมีความพร้อมสูงและเห็นพ้องต้องกันในทิศทางการพัฒนานวัตกรรมองค์กร",
+        "nextMeeting": "ติดตามผลการใช้งานวันที่ 3 กันยายน 2569 เวลา 10:00 น."
+      },
+      "createdAt": "2026-08-25T10:00:00.000Z"
+    },
+    {
+      "id": "mtg_2",
+      "title": "Weekly Standup & Sprint Review",
+      "agenda": "1. อัปเดตงานประจำสัปดาห์\n2. ปัญหาและอุปสรรค (Blockers)\n3. เป้าหมาย Sprint ถัดไป",
+      "date": "2026-08-26",
+      "startTime": "13:30",
+      "endTime": "14:30",
+      "room": "Online Meeting Room A",
+      "locationType": "online",
+      "gpsRequired": false,
+      "gpsLat": 0,
+      "gpsLng": 0,
+      "gpsRadius": 0,
+      "organizer": "กิตติศักดิ์ พัฒนา (Product Manager)",
+      "department": "ผลิตภัณฑ์ (Product)",
+      "participants": [
+        "วิภาดา รักเรียน (Tech Lead)",
+        "กิตติศักดิ์ พัฒนา (Product Manager)",
+        "ณิชาภา สุขสมบัติ (Designer)",
+        "ธนากร มุ่งมั่น (Marketing)"
+      ],
+      "status": "completed",
+      "transcript": "00:05 [กิตติศักดิ์]: เริ่ม Standup ประจำสัปดาห์ครับ\n00:40 [วิภาดา]: ฝั่ง Dev เสร็จสิ้นการทำ Backend API และเชื่อมต่อ AI Service\n01:20 [ธนากร]: Marketing เตรียมทำคู่มือและการสื่อสารเปิดตัวระบบแล้วครับ",
+      "aiSummary": {
+        "executiveSummary": "การประชุมติดตามความคืบหน้ารอบสัปดาห์ ทุกฝ่ายส่งมอบงานตามแผน และไม่มีอุปสรรคสำคัญ",
+        "keyPoints": [
+          "การพัฒนา Backend และ API เสร็จสมบูรณ์",
+          "สื่อประชาสัมพันธ์และคู่มือการใช้งานพร้อมเผยแพร่"
+        ],
+        "decisions": [
+          "เดินหน้าเปิดตัวตามกำหนดการเดิม"
+        ],
+        "actionItems": [
+          {
+            "task": "ส่งมอบ Release Notes และคู่มือระบบ",
+            "assignee": "ธนากร มุ่งมั่น (Marketing)",
+            "deadline": "2026-08-27",
+            "priority": "Medium",
+            "status": "Completed"
+          }
+        ],
+        "sentiment": "กระตือรือร้นและตรงตามเป้าหมาย",
+        "nextMeeting": "วันจันทร์หน้า 13:30 น."
+      },
+      "createdAt": "2026-08-24T08:00:00.000Z"
+    }
+  ],
+  "meetingAttendance": [
+    {
+      "id": "matt_1",
+      "meetingId": "mtg_1",
+      "participantName": "สมชาย ใจดี (HR Lead)",
+      "checkInTime": "09:25:40",
+      "checkInDate": "27/8/2569",
+      "status": "on_time",
+      "lat": 13.8198,
+      "lng": 100.5144,
+      "distance": 5,
+      "confidence": 0.98,
+      "timestamp": "2026-08-27T09:25:40.000Z"
+    },
+    {
+      "id": "matt_2",
+      "meetingId": "mtg_1",
+      "participantName": "วิภาดา รักเรียน (Tech Lead)",
+      "checkInTime": "09:28:15",
+      "checkInDate": "27/8/2569",
+      "status": "on_time",
+      "lat": 13.8197,
+      "lng": 100.5143,
+      "distance": 12,
+      "confidence": 0.96,
+      "timestamp": "2026-08-27T09:28:15.000Z"
+    },
+    {
+      "id": "matt_3",
+      "meetingId": "mtg_1",
+      "participantName": "กิตติศักดิ์ พัฒนา (Product Manager)",
+      "checkInTime": "09:38:00",
+      "checkInDate": "27/8/2569",
+      "status": "late",
+      "lat": 13.8199,
+      "lng": 100.5146,
+      "distance": 22,
+      "confidence": 0.94,
+      "timestamp": "2026-08-27T09:38:00.000Z"
+    }
+  ],
+  "registrations": [
+    {
+      "registration_id": "REG-BCBC616D",
+      "meeting_id": "MTG-6DE72964",
+      "participant_type": "EXTERNAL",
+      "fullname": "สมชาย ใจดี",
+      "employee_code": "",
+      "organization": "วิทยาลัยมหานคร",
+      "department": "",
+      "position": "อาจารย์",
+      "email": "s6802061811100@email.kmutnb.ac.th",
+      "phone": "0852303842",
+      "approval_status": "PENDING",
+      "registered_at": "2026-08-27T06:02:14.982Z"
+    },
+    {
+      "registration_id": "REG-49C174C4",
+      "meeting_id": "MTG-6DE72964",
+      "participant_type": "INTERNAL",
+      "fullname": "อาจารย์ ทดสอบที่ 16688",
+      "employee_code": "EMP_16688",
+      "organization": "",
+      "department": "ฝ่ายวิชาการและวิจัย",
+      "position": "อาจารย์ประจำภาควิชา",
+      "email": "prof_16688@university.ac.th",
+      "phone": "0890016688",
+      "approval_status": "PENDING",
+      "registered_at": "2026-08-27T05:59:58.901Z"
+    },
+    {
+      "registration_id": "REG-C13E102E",
+      "meeting_id": "MTG-6DE72964",
+      "participant_type": "INTERNAL",
+      "fullname": "ทดสอบ ผู้เข้าร่วม 733",
+      "employee_code": "EMP9399",
+      "organization": "",
+      "department": "ฝ่ายวิจัยและพัฒนา",
+      "position": "นักวิจัย",
+      "email": "test1787810367526@example.com",
+      "phone": "0812345678",
+      "approval_status": "PENDING",
+      "registered_at": "2026-08-27T05:59:30.003Z"
+    }
+  ]
+}

@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ลงทะเบียนใบหน้าบุคลากร (Face Registration)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 10%, #1c1938 0%, #090d16 85%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .wizard-pill {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #a5b4fc;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      padding: 4px 14px;
+      border-radius: 9999px;
+    }
+
+    /* Header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .page-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .page-desc {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    /* Progress Indicator */
+    .progress-bar-wrap {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      height: 6px;
+      border-radius: 9999px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      width: 33.33%;
+      border-radius: 9999px;
+      transition: width 0.3s ease;
+    }
+
+    .step-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .step-label-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s ease;
+    }
+
+    .step-label-item.active {
+      color: #a5b4fc;
+      font-weight: 600;
+    }
+
+    .step-label-item.completed {
+      color: var(--success);
+    }
+
+    /* Main Card */
+    .wizard-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 28px 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
+    }
+
+    .wizard-step {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .wizard-step.active {
+      display: flex;
+    }
+
+    /* Step 1: Form */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .form-label .req {
+      color: #f87171;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      font-family: 'Sarabun', sans-serif;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.08);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: #64748b;
+    }
+
+    /* Camera Viewport */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #020617;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 2px solid rgba(99, 102, 241, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #overlayCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      transform: scaleX(-1);
+    }
+
+    .face-guide-frame {
+      position: absolute;
+      width: 220px;
+      height: 270px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 50% 50% 45% 45%;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+      transition: border-color 0.3s ease;
+    }
+
+    .face-guide-frame.detected {
+      border-color: #34d399;
+      border-style: solid;
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.4), 0 0 0 9999px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Status Banner */
+    .scan-status-panel {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scan-status-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .scan-status-info {
+      flex: 1;
+    }
+
+    .scan-status-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .scan-status-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Step 3: Review Grid */
+    .review-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    @media (max-width: 500px) {
+      .review-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .review-snapshot-box {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #020617;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .review-snapshot-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .review-details {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .review-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .review-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .review-val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .review-val.vector-status {
+      color: #34d399;
+      font-size: 0.88rem;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Sarabun', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      text-decoration: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-primary:disabled {
+      background: rgba(255, 255, 255, 0.1);
+      color: #64748b;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--muted);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: 'Sarabun', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .button-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Modal / Alert Overlay */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .modal-icon {
+      font-size: 40px;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .modal-text {
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+    }
+
+    /* Success Card View */
+    .success-badge-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.15);
+      border: 2px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 12px;
+    }
+
+    .success-details-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .success-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+
+    .success-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .success-row-label {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .success-row-val {
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Navigation -->
+    <div class="top-nav">
+      <a href="index.html" class="back-btn" id="btnBackHome" onclick="handleLeavePage()">
+        <span>←</span>
+        <span>กลับหน้าหลัก</span>
+      </a>
+      <span class="wizard-pill" id="stepPill">ขั้นตอน 1 / 3</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title" id="mainHeaderTitle">👤 ลงทะเบียนใบหน้าบุคลากร</h1>
+      <p class="page-desc" id="mainHeaderDesc">บันทึกข้อมูลใบหน้าลงสู่ระบบฐานข้อมูลกลาง Google Sheets</p>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+
+    <div class="step-labels">
+      <span class="step-label-item active" id="labelStep1">1. ข้อมูลบุคลากร</span>
+      <span class="step-label-item" id="labelStep2">2. สแกนใบหน้า</span>
+      <span class="step-label-item" id="labelStep3">3. ตรวจสอบและบันทึก</span>
+    </div>
+
+    <!-- Main Wizard Card Container -->
+    <div class="wizard-card">
+
+      <!-- ================= STEP 1: กรอกข้อมูลบุคลากร ================= -->
+      <section class="wizard-step active" id="step1">
+        <div class="form-group">
+          <label class="form-label" for="empCodeInput">
+            รหัสบุคลากร <span class="req">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="empCodeInput" 
+            class="form-input" 
+            placeholder="เช่น EMP001, 680206181" 
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="fullnameInput">
+            ชื่อ-นามสกุล <span class="req">*</span>
+          </label>
+          <input 
+            type="text" 
+            id="fullnameInput" 
+            class="form-input" 
+            placeholder="เช่น สมชาย ใจดี" 
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="deptInput">ฝ่าย / แผนก (ไม่บังคับ)</label>
+          <input 
+            type="text" 
+            id="deptInput" 
+            class="form-input" 
+            placeholder="เช่น ฝ่ายเทคโนโลยีและวิศวกรรม, ทรัพยากรบุคคล" 
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="positionInput">ตำแหน่ง (ไม่บังคับ)</label>
+          <input 
+            type="text" 
+            id="positionInput" 
+            class="form-input" 
+            placeholder="เช่น Software Engineer, HR Specialist" 
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="button-stack" style="margin-top: 12px;">
+          <button type="button" class="btn-primary" id="btnStep1Next" onclick="handleStep1Next()">
+            <span>ถัดไป: สแกนใบหน้า</span>
+            <span>➜</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= STEP 2: สแกนใบหน้า ================= -->
+      <section class="wizard-step" id="step2">
+        <div class="camera-container" id="cameraViewport">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlayCanvas"></canvas>
+          <div class="face-guide-frame" id="guideFrame"></div>
+        </div>
+
+        <div class="scan-status-panel" id="scanStatusPanel">
+          <div class="scan-status-icon" id="scanStatusIcon">⏳</div>
+          <div class="scan-status-info">
+            <div class="scan-status-title" id="scanStatusTitle">กำลังเตรียมกล้องและ AI Model...</div>
+            <div class="scan-status-desc" id="scanStatusDesc">กรุณารอสักครู่</div>
+          </div>
+        </div>
+
+        <div class="button-stack">
+          <button type="button" class="btn-primary" id="btnCaptureFace" onclick="captureAndProceed()" disabled>
+            <span>ดำเนินการต่อ</span>
+            <span>➜</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="goToStep(1)">
+            <span>← ย้อนกลับไปแก้ไขข้อมูล</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= STEP 3: ตรวจสอบและบันทึก ================= -->
+      <section class="wizard-step" id="step3">
+        <div class="review-grid">
+          <div class="review-snapshot-box">
+            <img id="reviewSnapshotImg" class="review-snapshot-img" alt="Face Snapshot">
+          </div>
+          <div class="review-details">
+            <div class="review-item">
+              <span class="review-label">รหัสบุคลากร</span>
+              <span class="review-val" id="reviewEmpCode">-</span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">ชื่อ-นามสกุล</span>
+              <span class="review-val" id="reviewFullname">-</span>
+            </div>
+            <div class="review-item" id="reviewDeptRow">
+              <span class="review-label">ฝ่าย / แผนก</span>
+              <span class="review-val" id="reviewDept">-</span>
+            </div>
+            <div class="review-item">
+              <span class="review-label">สถานะเวกเตอร์ใบหน้า</span>
+              <span class="review-val vector-status" id="reviewVectorStatus">✅ สแกนใบหน้าสมบูรณ์ (128 Dimensions)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-stack" style="margin-top: 10px;">
+          <button type="button" class="btn-primary" id="btnConfirmSave" onclick="saveFaceToBackend()">
+            <span>💾 ยืนยันและบันทึกข้อมูลใบหน้า</span>
+          </button>
+          <button type="button" class="btn-secondary" id="btnRescan" onclick="goToStep(2)">
+            <span>📸 สแกนใบหน้าใหม่</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="goToStep(1)">
+            <span>✏️ แก้ไขข้อมูลบุคลากร</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= STEP 4: สำเร็จ (Success Screen) ================= -->
+      <section class="wizard-step" id="stepSuccess">
+        <div style="text-align: center;">
+          <div class="success-badge-large">✓</div>
+          <h2 style="font-size: 1.5rem; font-weight: 800; color: #fff; margin-bottom: 6px;">
+            ✅ ลงทะเบียนใบหน้าสำเร็จ
+          </h2>
+          <p style="color: var(--muted); font-size: 0.92rem; margin-bottom: 20px;">
+            ข้อมูลใบหน้าได้รับการบันทึกเรียบร้อยแล้ว
+          </p>
+
+          <div class="success-details-card">
+            <div class="success-row">
+              <span class="success-row-label">ชื่อ-นามสกุล:</span>
+              <span class="success-row-val" id="successFullname">-</span>
+            </div>
+            <div class="success-row">
+              <span class="success-row-label">รหัสบุคลากร:</span>
+              <span class="success-row-val" id="successEmpCode">-</span>
+            </div>
+            <div class="success-row">
+              <span class="success-row-label">ข้อความ:</span>
+              <span class="success-row-val" style="color: #34d399;">ข้อมูลใบหน้าได้รับการบันทึกเรียบร้อยแล้ว</span>
+            </div>
+            <div class="success-row">
+              <span class="success-row-label">การตรวจสอบ (Verification):</span>
+              <span class="success-row-val" id="successVerificationStatus" style="color: #34d399;">✅ Google Sheets Sync Verified</span>
+            </div>
+          </div>
+
+          <div class="button-stack" style="margin-top: 24px;">
+            <a href="index.html" class="btn-primary">
+              <span>เสร็จสิ้น</span>
+            </a>
+            <a href="meeting-scan.html?mode=CHECK_IN" class="btn-secondary">
+              <span>📍 ไปยังหน้าเช็กอินเข้าประชุม</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Duplicate Confirmation Modal -->
+  <div class="modal-backdrop" id="duplicateModal">
+    <div class="modal-card">
+      <div class="modal-icon">⚠️</div>
+      <h3 class="modal-title">ตรวจพบข้อมูลเดิม</h3>
+      <p class="modal-text" id="duplicateModalText">
+        บุคลากรรหัสนี้มีข้อมูลใบหน้าอยู่แล้ว
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeDuplicateModal(false)">
+          ยกเลิก
+        </button>
+        <button type="button" class="btn-primary" onclick="closeDuplicateModal(true)">
+          สแกนใบหน้าใหม่
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration & Face-API Constants
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+
+    // Application State
+    let currentStep = 1;
+    let modelsLoaded = false;
+    let cameraStream = null;
+    let scanLoopInterval = null;
+    let knownFacesCache = [];
+
+    // Registered Face Data State
+    let capturedDescriptorArray = null; // Exactly 128 numeric values
+    let capturedSnapshotDataUrl = null;
+    let currentEmployee = {
+      code: '',
+      fullname: '',
+      department: '',
+      position: ''
+    };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Pre-load known faces for duplicate detection
+      loadExistingFaces();
+      // Pre-load AI models
+      initAIModels();
+    });
+
+    async function loadExistingFaces() {
+      try {
+        const res = await apiFetch('getKnownFaces');
+        const list = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+        knownFacesCache = list;
+        console.log('[FaceRegister] Loaded existing known faces count:', knownFacesCache.length);
+      } catch (err) {
+        console.warn('[FaceRegister] Could not pre-fetch known faces:', err.message);
+      }
+    }
+
+    async function initAIModels() {
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        modelsLoaded = true;
+        console.log('[FaceRegister] AI Models loaded successfully');
+      } catch (err) {
+        console.error('[FaceRegister] Failed to load AI models:', err);
+      }
+    }
+
+    function goToStep(step) {
+      currentStep = step;
+
+      // Update wizard steps visibility
+      document.querySelectorAll('.wizard-step').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(step === 4 ? 'stepSuccess' : 'step' + step);
+      if (activeEl) activeEl.classList.add('active');
+
+      // Update progress bar and labels
+      const pct = step === 4 ? 100 : (step / 3) * 100;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('stepPill').textContent = step === 4 ? 'เสร็จสิ้น' : `ขั้นตอน ${step} / 3`;
+
+      ['1', '2', '3'].forEach(num => {
+        const lbl = document.getElementById('labelStep' + num);
+        if (lbl) {
+          lbl.className = 'step-label-item';
+          const n = parseInt(num);
+          if (n === step) lbl.classList.add('active');
+          else if (n < step) lbl.classList.add('completed');
+        }
+      });
+
+      if (step === 2) {
+        startCameraAndScan();
+      } else {
+        stopCamera();
+      }
+
+      if (step === 3) {
+        renderStep3Review();
+      }
+    }
+
+    // Step 1: Validate Form & Check Duplicates
+    async function handleStep1Next() {
+      const code = document.getElementById('empCodeInput').value.trim();
+      const fullname = document.getElementById('fullnameInput').value.trim();
+      const dept = document.getElementById('deptInput').value.trim();
+      const pos = document.getElementById('positionInput').value.trim();
+
+      if (!code) {
+        alert('กรุณาระบุรหัสบุคลากร');
+        document.getElementById('empCodeInput').focus();
+        return;
+      }
+      if (!fullname) {
+        alert('กรุณาระบุชื่อ-นามสกุล');
+        document.getElementById('fullnameInput').focus();
+        return;
+      }
+
+      currentEmployee = {
+        code,
+        fullname,
+        department: dept,
+        position: pos
+      };
+
+      // Check if duplicate employee_code exists
+      const existing = knownFacesCache.find(f => {
+        const fCode = (f.employee_code || f.employeeCode || f.id || '').trim();
+        const fName = (f.fullname || f.name || f.label || '').trim();
+        return (fCode && fCode.toLowerCase() === code.toLowerCase()) || (fName && fName.toLowerCase() === fullname.toLowerCase());
+      });
+
+      if (existing) {
+        showDuplicateModal(`บุคลากรรหัส ${code} (${existing.fullname || fullname}) มีข้อมูลใบหน้าอยู่แล้ว`);
+        return;
+      }
+
+      goToStep(2);
+    }
+
+    function showDuplicateModal(message) {
+      document.getElementById('duplicateModalText').textContent = message;
+      document.getElementById('duplicateModal').classList.add('active');
+    }
+
+    function closeDuplicateModal(proceedToRescan) {
+      document.getElementById('duplicateModal').classList.remove('active');
+      if (proceedToRescan) {
+        goToStep(2);
+      }
+    }
+
+    // Step 2: Camera & Detection Loop
+    async function startCameraAndScan() {
+      const video = document.getElementById('video');
+      const btnCapture = document.getElementById('btnCaptureFace');
+      btnCapture.disabled = true;
+
+      setScanStatus('⏳', 'กำลังเปิดกล้อง...', 'กรุณาอนุญาตการเข้าถึงกล้องบนอุปกรณ์');
+
+      try {
+        if (!modelsLoaded) {
+          setScanStatus('⏳', 'กำลังโหลด AI Model...', 'กรุณารอสักครู่');
+          await initAIModels();
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        });
+
+        cameraStream = stream;
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+          video.play();
+          setScanStatus('🔍', 'กำลังตรวจจับใบหน้า...', 'กรุณามองตรงที่กล้องและให้อยู่ในกรอบ');
+          startFaceDetectionLoop();
+        };
+
+      } catch (err) {
+        console.error('[FaceRegister] Camera error:', err);
+        setScanStatus('❌', 'ไม่สามารถเปิดกล้องได้', err.message || 'กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง');
+      }
+    }
+
+    function stopCamera() {
+      if (scanLoopInterval) {
+        clearInterval(scanLoopInterval);
+        scanLoopInterval = null;
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+    }
+
+    function setScanStatus(icon, title, desc) {
+      const iconEl = document.getElementById('scanStatusIcon');
+      const titleEl = document.getElementById('scanStatusTitle');
+      const descEl = document.getElementById('scanStatusDesc');
+      if (iconEl) iconEl.textContent = icon;
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+    }
+
+    function startFaceDetectionLoop() {
+      if (scanLoopInterval) clearInterval(scanLoopInterval);
+
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlayCanvas');
+      const guideFrame = document.getElementById('guideFrame');
+      const btnCapture = document.getElementById('btnCaptureFace');
+
+      let isProcessing = false;
+
+      scanLoopInterval = setInterval(async () => {
+        if (isProcessing || !video || video.paused || video.ended || currentStep !== 2) return;
+        isProcessing = true;
+
+        try {
+          // Detect single face with landmarks & 128-dimensional descriptor
+          const detection = await faceapi
+            .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+
+          if (detection) {
+            guideFrame.classList.add('detected');
+            setScanStatus('⚡', 'พบใบหน้าแล้ว กรุณามองตรง', 'กำลังสร้างข้อมูลเวกเตอร์ใบหน้า...');
+
+            const rawDesc = detection.descriptor;
+            if (rawDesc && (rawDesc.length === 128 || rawDesc instanceof Float32Array)) {
+              // Convert Float32Array to regular JavaScript Array of numbers
+              const normalArray = Array.from(rawDesc);
+
+              if (Array.isArray(normalArray) && normalArray.length === 128 && !normalArray.some(isNaN)) {
+                capturedDescriptorArray = normalArray;
+                setScanStatus('✅', 'พร้อมบันทึก', 'ตรวจจับใบหน้าและสร้างข้อมูล 128 มิติเรียบร้อย');
+                btnCapture.disabled = false;
+              }
+            }
+          } else {
+            guideFrame.classList.remove('detected');
+            setScanStatus('🔍', 'กำลังตรวจจับใบหน้า...', 'กรุณามองตรงที่กล้องและจัดตำแหน่งใบหน้าให้อยู่ในกรอบ');
+          }
+        } catch (err) {
+          console.warn('[FaceRegister] Detection tick error:', err);
+        } finally {
+          isProcessing = false;
+        }
+      }, 300);
+    }
+
+    // Capture snapshot for review and proceed to Step 3
+    function captureAndProceed() {
+      if (!capturedDescriptorArray || capturedDescriptorArray.length !== 128) {
+        alert('ไม่สามารถสร้างข้อมูลใบหน้าได้ กรุณามองตรงที่กล้องแล้วลองใหม่');
+        return;
+      }
+
+      // Snapshot from video to canvas
+      const video = document.getElementById('video');
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = video.videoWidth || 640;
+      snapCanvas.height = video.videoHeight || 480;
+      const ctx = snapCanvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+      capturedSnapshotDataUrl = snapCanvas.toDataURL('image/jpeg', 0.85);
+
+      stopCamera();
+      goToStep(3);
+    }
+
+    // Step 3: Render Summary Review
+    function renderStep3Review() {
+      document.getElementById('reviewEmpCode').textContent = currentEmployee.code || '-';
+      document.getElementById('reviewFullname').textContent = currentEmployee.fullname || '-';
+
+      const deptRow = document.getElementById('reviewDeptRow');
+      if (currentEmployee.department || currentEmployee.position) {
+        deptRow.style.display = 'flex';
+        document.getElementById('reviewDept').textContent = `${currentEmployee.department || '-'} / ${currentEmployee.position || '-'}`;
+      } else {
+        deptRow.style.display = 'none';
+      }
+
+      if (capturedSnapshotDataUrl) {
+        document.getElementById('reviewSnapshotImg').src = capturedSnapshotDataUrl;
+      }
+    }
+
+    // Step 3: Save to Real Backend via POST /api -> Google Apps Script
+    async function saveFaceToBackend() {
+      // Validate descriptor before sending
+      if (!capturedDescriptorArray) {
+        alert('ไม่สามารถสร้างข้อมูลใบหน้าได้\nกรุณามองตรงที่กล้องแล้วลองใหม่');
+        goToStep(2);
+        return;
+      }
+
+      if (!Array.isArray(capturedDescriptorArray) || capturedDescriptorArray.length !== 128) {
+        alert('ข้อมูลใบหน้าไม่สมบูรณ์\nกรุณาสแกนใหม่');
+        goToStep(2);
+        return;
+      }
+
+      const btnSave = document.getElementById('btnConfirmSave');
+      btnSave.disabled = true;
+      btnSave.innerHTML = '<span class="spinner"></span> <span>กำลังบันทึกข้อมูลใบหน้า...</span>';
+
+      const employeeCode = currentEmployee.code;
+      const fullname = currentEmployee.fullname;
+      const department = currentEmployee.department;
+      const position = currentEmployee.position;
+
+      const payload = {
+        action: 'registerUser',
+        employee_code: employeeCode,
+        fullname: fullname,
+        department: department,
+        position: position,
+        descriptor: capturedDescriptorArray,
+        faceDescriptor: capturedDescriptorArray
+      };
+
+      // Temporary debug logs during development (Requirement 11)
+      console.log("Employee code:", employeeCode);
+      console.log("Full name:", fullname);
+      console.log("Descriptor length:", capturedDescriptorArray.length);
+      console.log("registerUser payload:", {
+        action: payload.action,
+        employee_code: payload.employee_code,
+        fullname: payload.fullname,
+        descriptorLength: payload.descriptor.length
+      });
+
+      try {
+        const result = await apiFetch('registerUser', payload, 'POST');
+        console.log("registerUser response:", result);
+
+        if (!result || result.success === false) {
+          const errMsg = result?.message || result?.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+          alert('❌ บันทึกล้มเหลว: ' + errMsg);
+          btnSave.disabled = false;
+          btnSave.innerHTML = '<span>💾 ยืนยันและบันทึกข้อมูลใบหน้า</span>';
+          return;
+        }
+
+        // Mandatory verification against the REAL Google Sheets face database.
+        let knownFacesResult;
+        try {
+          knownFacesResult = await apiFetch('getKnownFaces');
+          console.log("getKnownFaces verification:", knownFacesResult);
+        } catch (verErr) {
+          throw new Error('บันทึกแล้วแต่ตรวจสอบฐานข้อมูลใบหน้าไม่ได้: ' + verErr.message);
+        }
+
+        if (!Array.isArray(knownFacesResult)) {
+          throw new Error(knownFacesResult?.message || 'รูปแบบข้อมูลฐานใบหน้าไม่ถูกต้อง');
+        }
+
+        const list = knownFacesResult;
+        const matchFound = list.some(u => {
+          const uCode = String(u.employee_code || u.employeeCode || '').trim().toLowerCase();
+          const uName = String(u.fullname || u.name || u.label || '').trim().toLowerCase();
+          return (uCode && uCode === employeeCode.toLowerCase()) || (uName && uName.includes(fullname.toLowerCase()));
+        });
+
+        if (list.length === 0 || !matchFound) {
+          throw new Error('ระบบยังไม่พบข้อมูลบุคลากรใน Google Sheets หลังการบันทึก กรุณาตรวจสอบ URL ของ Apps Script แล้วลองใหม่');
+        }
+
+        console.log(`[Verification] ✅ Google Sheets persistence verified: ${fullname}, total=${list.length}`);
+
+        // Render success ONLY after real persistence verification.
+        document.getElementById('successFullname').textContent = fullname;
+        document.getElementById('successEmpCode').textContent = employeeCode;
+        document.getElementById('successVerificationStatus').textContent = '✅ Google Sheets Sync Verified';
+
+        knownFacesCache = list;
+        goToStep(4);
+
+      } catch (err) {
+        console.error('[FaceRegister] Submit error:', err);
+        alert('❌ บันทึกล้มเหลว: ' + (err.message || 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้'));
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<span>💾 ยืนยันและบันทึกข้อมูลใบหน้า</span>';
+      }
+    }
+
+    function handleLeavePage() {
+      stopCamera();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1f4b">
+  <title>ระบบบริหารจัดการประชุมอัจฉริยะ | Smart Academic Conference Management System</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="js/api-config.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --navy-950: #07142f;
+      --navy-900: #0b1f4b;
+      --navy-800: #12316f;
+      --navy-700: #1e4294;
+      --blue-100: #eaf1fb;
+      --blue-50: #f5f8fd;
+      --gold: #b9914c;
+      --gold-soft: #f5ead5;
+      --surface: #ffffff;
+      --background: #f4f7fb;
+      --border: #dbe3ef;
+      --border-hover: #b9c8df;
+      --text: #13213a;
+      --muted: #66758c;
+      --shadow-sm: 0 4px 14px rgba(20, 39, 78, 0.06);
+      --shadow-md: 0 12px 30px rgba(20, 39, 78, 0.10);
+      --radius-xl: 22px;
+      --radius-lg: 17px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Sarabun", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 5%, rgba(30, 66, 148, 0.08), transparent 24%),
+        radial-gradient(circle at 88% 10%, rgba(185, 145, 76, 0.08), transparent 22%),
+        linear-gradient(180deg, #fbfcfe 0%, var(--background) 100%);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    body::before {
+      width: 320px;
+      height: 320px;
+      top: -170px;
+      left: -130px;
+      border: 1px solid rgba(30, 66, 148, 0.15);
+      border-radius: 50%;
+      box-shadow:
+        55px 55px 0 0 rgba(30, 66, 148, 0.025),
+        110px 110px 0 0 rgba(30, 66, 148, 0.018);
+    }
+
+    body::after {
+      width: 360px;
+      height: 360px;
+      right: -210px;
+      bottom: -210px;
+      border: 1px solid rgba(185, 145, 76, 0.18);
+      border-radius: 50%;
+    }
+
+    .page-shell {
+      width: min(940px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 38px 0 44px;
+    }
+
+    /* =========================
+       HEADER / BRAND
+       ========================= */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand-emblem {
+      width: 104px;
+      height: 104px;
+      margin: 0 auto 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      background:
+        linear-gradient(145deg, #ffffff 0%, #eef4fc 100%);
+      border: 1px solid #d4deec;
+      box-shadow: 0 14px 34px rgba(11, 31, 75, 0.12);
+      position: relative;
+    }
+
+    .brand-emblem::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border: 1px solid rgba(185, 145, 76, 0.45);
+      border-radius: 22px;
+      pointer-events: none;
+    }
+
+    .brand-emblem svg {
+      width: 74px;
+      height: 74px;
+    }
+
+    .thai-title {
+      color: var(--navy-900);
+      font-size: clamp(1.72rem, 4.1vw, 2.48rem);
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.015em;
+      margin-bottom: 6px;
+    }
+
+    .english-title {
+      color: var(--navy-700);
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      font-weight: 700;
+      letter-spacing: 0.015em;
+      line-height: 1.35;
+    }
+
+    .title-rule {
+      width: 160px;
+      height: 1px;
+      margin: 18px auto 12px;
+      background: linear-gradient(90deg, transparent, #9fb0c9 20%, #9fb0c9 80%, transparent);
+      position: relative;
+    }
+
+    .title-rule::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      top: 50%;
+      left: 50%;
+      background: var(--gold);
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .page-instruction {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    /* =========================
+       SERVICE CARDS
+       ========================= */
+    .service-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .service-card {
+      min-height: 96px;
+      display: grid;
+      grid-template-columns: 68px 1fr 34px;
+      align-items: center;
+      gap: 18px;
+      padding: 17px 19px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--border);
+      color: inherit;
+      text-decoration: none;
+      box-shadow: var(--shadow-sm);
+      transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .service-card:hover,
+    .service-card:focus-visible {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-md);
+      background: #ffffff;
+      outline: none;
+    }
+
+    .service-icon {
+      width: 60px;
+      height: 60px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: var(--blue-50);
+      border: 1px solid #d9e4f3;
+      color: var(--navy-800);
+    }
+
+    .service-icon svg {
+      width: 34px;
+      height: 34px;
+      stroke: currentColor;
+    }
+
+    .service-content {
+      min-width: 0;
+    }
+
+    .service-title {
+      color: var(--navy-900);
+      font-size: clamp(1.02rem, 2.6vw, 1.22rem);
+      font-weight: 750;
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+
+    .service-description {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .service-arrow {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: #7889a3;
+      transition: transform 0.18s ease, color 0.18s ease;
+    }
+
+    .service-card:hover .service-arrow {
+      transform: translateX(3px);
+      color: var(--navy-700);
+    }
+
+    .service-arrow svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    .restricted-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 8px;
+      vertical-align: middle;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #6d521d;
+      background: var(--gold-soft);
+      border: 1px solid #e8d4aa;
+    }
+
+    /* =========================
+       ADMIN
+       ========================= */
+    .admin-section {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid #dce4ef;
+    }
+
+    .admin-card {
+      background:
+        linear-gradient(135deg, var(--navy-950), var(--navy-800));
+      border-color: transparent;
+      box-shadow: 0 12px 30px rgba(7, 20, 47, 0.18);
+    }
+
+    .admin-card:hover,
+    .admin-card:focus-visible {
+      border-color: transparent;
+      background:
+        linear-gradient(135deg, #0a1b3f, #173b85);
+    }
+
+    .admin-card .service-icon {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.16);
+      color: #f0d8a3;
+    }
+
+    .admin-card .service-title {
+      color: #ffffff;
+    }
+
+    .admin-card .service-description {
+      color: #c8d4e7;
+    }
+
+    .admin-card .service-arrow {
+      color: #d4dfef;
+    }
+
+    /* =========================
+       FOOTER
+       ========================= */
+    .system-footer {
+      margin-top: 24px;
+      text-align: center;
+      color: #8794a7;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .system-footer strong {
+      color: #687890;
+      font-weight: 600;
+    }
+
+    /* =========================
+       RESPONSIVE
+       ========================= */
+    @media (max-width: 680px) {
+      .page-shell {
+        width: min(100% - 18px, 940px);
+        padding-top: 24px;
+      }
+
+      .brand-emblem {
+        width: 88px;
+        height: 88px;
+        border-radius: 24px;
+      }
+
+      .brand-emblem svg {
+        width: 62px;
+        height: 62px;
+      }
+
+      .brand-header {
+        margin-bottom: 22px;
+      }
+
+      .service-card {
+        grid-template-columns: 56px 1fr 24px;
+        gap: 13px;
+        padding: 15px 13px;
+        min-height: 88px;
+      }
+
+      .service-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+      }
+
+      .service-icon svg {
+        width: 30px;
+        height: 30px;
+      }
+
+      .service-description {
+        font-size: 0.84rem;
+      }
+
+      .restricted-badge {
+        margin-left: 0;
+        margin-top: 5px;
+      }
+    }
+
+    @media (max-width: 410px) {
+      .service-card {
+        grid-template-columns: 50px 1fr 20px;
+        gap: 10px;
+      }
+
+      .service-icon {
+        width: 48px;
+        height: 48px;
+      }
+
+      .service-title {
+        font-size: 0.98rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-shell">
+
+    <!-- =========================
+         BRAND / SYSTEM TITLE
+         ========================= -->
+    <header class="brand-header">
+
+      <!-- Formal Academic + Technology Emblem (inline SVG, no image file needed) -->
+      <div class="brand-emblem" aria-hidden="true">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- circuit -->
+          <path d="M17 29H26V20M83 29H74V20M17 71H26V80M83 71H74V80"
+                stroke="#1E4294" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="17" cy="29" r="3" fill="#B9914C"/>
+          <circle cx="83" cy="29" r="3" fill="#B9914C"/>
+          <circle cx="17" cy="71" r="3" fill="#B9914C"/>
+          <circle cx="83" cy="71" r="3" fill="#B9914C"/>
+
+          <!-- academic roof -->
+          <path d="M26 34L50 21L74 34H26Z"
+                fill="#0B1F4B"/>
+          <path d="M31 38H69" stroke="#B9914C" stroke-width="2.5" stroke-linecap="round"/>
+
+          <!-- pillars -->
+          <path d="M33 40V59M43 40V59M57 40V59M67 40V59"
+                stroke="#12316F" stroke-width="4" stroke-linecap="round"/>
+          <path d="M29 62H71" stroke="#0B1F4B" stroke-width="4" stroke-linecap="round"/>
+
+          <!-- shield -->
+          <path d="M50 55C58 60 66 60 70 60V70C70 80 61 87 50 91C39 87 30 80 30 70V60C34 60 42 60 50 55Z"
+                fill="#12316F" stroke="#FFFFFF" stroke-width="2"/>
+          <path d="M41 72L47 78L59 66"
+                stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <h1 class="thai-title">ระบบบริหารจัดการประชุมอัจฉริยะ</h1>
+      <p class="english-title">Smart Academic Conference Management System</p>
+
+      <div class="title-rule" aria-hidden="true"></div>
+      <p class="page-instruction">กรุณาเลือกบริการที่ต้องการ</p>
+    </header>
+
+    <!-- =========================
+         MAIN SERVICES
+         ========================= -->
+    <main class="service-list">
+
+      <!-- 1. CHECK-IN -->
+      <a href="meeting-scan.html?mode=CHECK_IN"
+         class="service-card"
+         id="btnCheckIn">
+        <div class="service-icon" aria-hidden="true">
+          <!-- ID badge + check -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <rect x="4.5" y="5.5" width="23" height="21" rx="3" stroke-width="1.8"/>
+            <circle cx="12" cy="13" r="3" stroke-width="1.8"/>
+            <path d="M7.8 20C8.9 17.7 10.3 16.6 12 16.6C13.7 16.6 15.1 17.7 16.2 20" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M19 12H24M19 16H23" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="23.5" cy="22.5" r="5" fill="#F5F8FD" stroke-width="1.8"/>
+            <path d="M21 22.5L22.7 24.2L26 20.8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">1. บันทึกเวลาเข้าร่วมประชุม (Check-in)</h2>
+          <p class="service-description">ยืนยันตัวตนและบันทึกเวลาเข้าร่วมการประชุม</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+      <!-- 2. CHECK-OUT -->
+      <a href="meeting-scan.html?mode=CHECK_OUT"
+         class="service-card"
+         id="btnCheckOut">
+        <div class="service-icon" aria-hidden="true">
+          <!-- clock / completion -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <circle cx="15" cy="15" r="10" stroke-width="1.8"/>
+            <path d="M15 9V15L19 18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21.5 24H27M24.5 21L27.5 24L24.5 27" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">2. บันทึกเวลาสิ้นสุดการเข้าร่วมประชุม (Check-out)</h2>
+          <p class="service-description">บันทึกเวลาสิ้นสุดการเข้าร่วมประชุม</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+      <!-- 3. REGISTRATION -->
+      <a href="meeting-register.html"
+         class="service-card"
+         id="btnRegister">
+        <div class="service-icon" aria-hidden="true">
+          <!-- clipboard -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <rect x="7" y="6" width="18" height="22" rx="2.5" stroke-width="1.8"/>
+            <path d="M12 6.5V5.5C12 4.7 12.7 4 13.5 4H18.5C19.3 4 20 4.7 20 5.5V6.5" stroke-width="1.8"/>
+            <path d="M11 13H21M11 17H18M11 21H16" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M20 23L25 18" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">3. ลงทะเบียนเข้าร่วมการประชุมวิชาการ</h2>
+          <p class="service-description">ลงทะเบียนและแจ้งความประสงค์เข้าร่วมการประชุม</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+      <!-- 4. STATUS -->
+      <a href="my-status.html"
+         class="service-card"
+         id="btnMyStatus">
+        <div class="service-icon" aria-hidden="true">
+          <!-- document search -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M7 4.5H19L24 9.5V18" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 4.5V10H24" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M7 4.5V27H17" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M11 14H20M11 18H17" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="22.5" cy="22.5" r="4.5" stroke-width="1.8"/>
+            <path d="M26 26L29 29" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">4. ตรวจสอบสถานะการเข้าร่วมประชุม</h2>
+          <p class="service-description">ตรวจสอบสถานะการลงทะเบียนและประวัติการเข้าร่วม</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+      <!-- 5. SMART RECORDING -->
+      <a href="meeting-record.html"
+         class="service-card"
+         id="btnMeetingRecord">
+        <div class="service-icon" aria-hidden="true">
+          <!-- microphone + waveform -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <rect x="12" y="5" width="8" height="14" rx="4" stroke-width="1.8"/>
+            <path d="M9 16C9 20 11.7 23 16 23C20.3 23 23 20 23 16" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M16 23V28M12 28H20" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M5 13V18M27 12V19M3 15V17M29 14V17" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">5. บันทึกและสรุปการประชุมอัจฉริยะ</h2>
+          <p class="service-description">บันทึกเสียง ถอดข้อความ และสรุปสาระสำคัญด้วย AI</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+      <!-- 6. REPORTS / DASHBOARD -->
+      <a href="meeting-reports.html"
+         class="service-card"
+         id="btnMeetingReports">
+        <div class="service-icon" aria-hidden="true">
+          <!-- analytics -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M5 26V7M5 26H27" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="9" y="17" width="4" height="6" rx="1" stroke-width="1.8"/>
+            <rect x="16" y="12" width="4" height="11" rx="1" stroke-width="1.8"/>
+            <rect x="23" y="8" width="4" height="15" rx="1" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">6. รายงานและแดชบอร์ดการประชุม</h2>
+          <p class="service-description">ตรวจสอบสถิติ รายงานการเข้าร่วม และเอกสารการประชุม</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+
+    </main>
+
+    <!-- =========================
+         ADMINISTRATION PORTAL
+         ========================= -->
+    <section class="admin-section">
+      <a href="admin.html"
+         class="service-card admin-card"
+         id="btnAdminPortal">
+        <div class="service-icon" aria-hidden="true">
+          <!-- shield + gear -->
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M16 4L26 8V15C26 21.5 21.8 26.5 16 29C10.2 26.5 6 21.5 6 15V8L16 4Z" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="16" cy="16" r="3.2" stroke-width="1.8"/>
+            <path d="M16 10.5V12M16 20V21.5M10.5 16H12M20 16H21.5M12.1 12.1L13.2 13.2M18.8 18.8L19.9 19.9M19.9 12.1L18.8 13.2M13.2 18.8L12.1 19.9"
+                  stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="service-content">
+          <h2 class="service-title">ระบบบริหารจัดการสำหรับผู้ดูแล</h2>
+          <p class="service-description">Administration Portal</p>
+        </div>
+        <div class="service-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </a>
+    </section>
+
+    <footer class="system-footer">
+      <strong>Smart Academic Conference Management System</strong><br>
+      ระบบสนับสนุนการบริหารจัดการการประชุมวิชาการอย่างเป็นระบบและมีประสิทธิภาพ
+    </footer>
+
+  </div>
+</body>
+</html>

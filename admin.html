@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สำหรับผู้ดูแลระบบ (Admin Portal)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --card-hover: rgba(255, 255, 255, 0.09);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --pink: #ec4899;
+      --blue: #3b82f6;
+      --teal: #14b8a6;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 80% 10%, #1c1938 0%, #090d16 80%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 28px;
+    }
+
+    .back-home-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      transition: all 0.2s ease;
+    }
+
+    .back-home-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .admin-actions { display:flex; align-items:center; gap:8px; }
+    .logout-btn {
+      border:1px solid rgba(248,113,113,.35);
+      background:rgba(239,68,68,.10);
+      color:#fecaca;
+      border-radius:9999px;
+      padding:7px 12px;
+      font-family:inherit;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .logout-btn:hover { background:rgba(239,68,68,.18); }
+
+    .admin-badge {
+      font-size: 0.8rem;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    /* Header */
+    .admin-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .admin-icon {
+      font-size: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .admin-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .admin-desc {
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    /* Menu Grid */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .admin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .admin-card:hover {
+      transform: translateY(-2px);
+      background: var(--card-hover);
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .icon-meetings { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; }
+    .icon-approvals { background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); color: #f472b6; }
+    .icon-attendance { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .icon-dashboard { background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc; }
+    .icon-ai { background: rgba(20, 184, 166, 0.15); border: 1px solid rgba(20, 184, 166, 0.3); color: #2dd4bf; }
+    .icon-config { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+    .icon-scan { background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #818cf8; }
+
+    .card-info {
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .card-arrow {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .admin-card:hover .card-arrow {
+      color: #fff;
+      transform: translateX(3px);
+    }
+
+    @media (max-width: 640px) {
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Nav -->
+    <div class="top-nav">
+      <a href="index.html" class="back-home-btn" id="btnBackUserHome">
+        <span>←</span>
+        <span>กลับหน้าหลักผู้ใช้</span>
+      </a>
+      <div class="admin-actions">
+        <span class="admin-badge">🔒 ADMINISTRATION PORTAL</span>
+        <button class="logout-btn" id="btnAdminLogout" type="button">ออกจากระบบ</button>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="admin-header">
+      <div class="admin-icon">⚙️</div>
+      <h1 class="admin-title">สำหรับผู้ดูแลระบบ</h1>
+      <p class="admin-desc">ศูนย์กลางจัดการการประชุม คำขอลงทะเบียน การเข้าร่วม และระบบ AI</p>
+    </div>
+
+    <!-- Main Admin Options -->
+    <div class="admin-grid">
+      <!-- 1. จัดการการประชุม -->
+      <a href="meetings.html" class="admin-card" id="btnAdminMeetings">
+        <div class="card-icon icon-meetings">📅</div>
+        <div class="card-info">
+          <h2 class="card-title">จัดการการประชุม</h2>
+          <p class="card-sub">สร้าง/แก้ไขการประชุม กำหนดพิกัด GPS รหัส QR และเวลา</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 2. คำขอลงทะเบียน & อนุมัติ -->
+      <a href="dashboard.html#registrations" class="admin-card" id="btnAdminApprovals">
+        <div class="card-icon icon-approvals">📝</div>
+        <div class="card-info">
+          <h2 class="card-title">คำขอลงทะเบียน</h2>
+          <p class="card-sub">ตรวจสอบและอนุมัติผู้ขอเข้าร่วมประชุม (APPROVED / REJECTED)</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 3. การเข้าร่วมประชุม & บันทึกเวลา -->
+      <a href="dashboard.html#attendance" class="admin-card" id="btnAdminAttendance">
+        <div class="card-icon icon-attendance">👥</div>
+        <div class="card-info">
+          <h2 class="card-title">การเข้าร่วมประชุม</h2>
+          <p class="card-sub">ดูรายชื่อผู้เข้าประชุม เวลาเช็กอิน-เช็กเอาต์ และสถานะมาสาย</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 4. Dashboard & รายงานภาพรวม -->
+      <a href="dashboard.html" class="admin-card" id="btnAdminDashboard">
+        <div class="card-icon icon-dashboard">📊</div>
+        <div class="card-info">
+          <h2 class="card-title">Dashboard & สถิติภาพรวม</h2>
+          <p class="card-sub">รายงานกราฟ KPI การเข้าร่วม และส่งออกข้อมูลสรุป</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 5. AI Meeting Assistant & ถอดเสียง -->
+      <a href="smart-room.html" class="admin-card" id="btnAdminAI">
+        <div class="card-icon icon-ai">🤖</div>
+        <div class="card-info">
+          <h2 class="card-title">AI Meeting Assistant</h2>
+          <p class="card-sub">ระบบบันทึกเสียง ถอดเสียงเป็นข้อความ และสรุปมติการประชุมด้วย AI</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 6. ตั้งค่าระบบ & GAS Connection -->
+      <a href="config.html" class="admin-card" id="btnAdminConfig">
+        <div class="card-icon icon-config">⚙️</div>
+        <div class="card-info">
+          <h2 class="card-title">ตั้งค่าระบบ</h2>
+          <p class="card-sub">ตั้งค่า Google Apps Script Web App URL และความปลอดภัย</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 7. ลงทะเบียนใบหน้าบุคลากร (Face Registration) -->
+      <a href="register.html" class="admin-card" id="btnAdminFaceRegister">
+        <div class="card-icon icon-scan">👤</div>
+        <div class="card-info">
+          <h2 class="card-title">ลงทะเบียนใบหน้าบุคลากร</h2>
+          <p class="card-sub">ลงทะเบียนใบหน้า 128 มิติ บันทึกลงฐานข้อมูลกลาง Google Sheets</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <!-- 8. ระบบสแกนใบหน้าตรวจสอบละเอียด -->
+      <a href="scan.html" class="admin-card" id="btnAdminDiagnosticScan">
+        <div class="card-icon icon-scan">📸</div>
+        <div class="card-info">
+          <h2 class="card-title">ระบบสแกนใบหน้าทั่วไป (v1)</h2>
+          <p class="card-sub">เครื่องมือตรวจสอบความแม่นยำและบันทึกเวลาเข้างานทั่วไป</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+
+      <a href="system-health.html" class="admin-card" id="btnSystemHealth">
+        <div class="card-icon">🛡️</div>
+        <div class="card-info">
+          <h2 class="card-title">System Health & Data Consistency</h2>
+          <p class="card-sub">ตรวจ Apps Script, Google Sheets/Drive, Gemini, Face DB และการเชื่อมโยงระบบ</p>
+        </div>
+        <div class="card-arrow">➜</div>
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    const ADMIN_TOKEN_KEY='smartMeetingAdminToken';
+    const currentParams=new URLSearchParams(location.search);
+    const urlToken=String(currentParams.get('admin_token')||'').trim();
+    const storedToken=String(sessionStorage.getItem(ADMIN_TOKEN_KEY)||'').trim();
+    const adminToken=urlToken||storedToken;
+
+    if(urlToken){
+      sessionStorage.setItem(ADMIN_TOKEN_KEY,urlToken);
+    }
+
+    function withAdminToken(href){
+      if(!adminToken)return href;
+      const hashIndex=href.indexOf('#');
+      const hash=hashIndex>=0?href.slice(hashIndex):'';
+      const baseHref=hashIndex>=0?href.slice(0,hashIndex):href;
+      const u=new URL(baseHref,location.href);
+      u.searchParams.set('admin_token',adminToken);
+      return u.pathname+u.search+hash;
+    }
+
+    // Keep the session token on every page opened from the Admin center.
+    document.querySelectorAll('a.admin-card').forEach(a=>{
+      a.setAttribute('href',withAdminToken(a.getAttribute('href')));
+    });
+
+    document.getElementById('btnAdminLogout')?.addEventListener('click', async () => {
+      try {
+        await fetch('/api/admin/logout', {
+          method:'POST',
+          credentials:'same-origin',
+          headers: adminToken ? {'Authorization':'Bearer '+adminToken} : {}
+        });
+      } catch (e) {}
+
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      location.replace('admin-login.html');
+    });
+
+    (async () => {
+      if(!adminToken){
+        location.replace('admin-login.html?next=admin.html');
+        return;
+      }
+
+      try {
+        const r = await fetch('/api/admin/session', {
+          credentials:'same-origin',
+          headers:{'Authorization':'Bearer '+adminToken}
+        });
+        const j = await r.json();
+
+        if (!j.authenticated) {
+          sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+          location.replace('admin-login.html?next=admin.html');
+        }
+      } catch (e) {
+        location.replace('admin-login.html?next=admin.html');
+      }
+    })();
+  </script>
+</body>
+</html>

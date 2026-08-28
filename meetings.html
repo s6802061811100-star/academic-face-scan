@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>จัดการการประชุม &amp; คำขอลงทะเบียน (Meeting Management &amp; Approval - v2/v4)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #a855f7;
+      --indigo: #6366f1;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 10% 20%, #172033 0%, #0b0f19 75%, #050811 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 60px;
+    }
+
+    /* Navbar */
+    .navbar {
+      width: 100%;
+      max-width: 1100px;
+      padding: 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-icon {
+      font-size: 24px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-btn {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .nav-btn:hover, .nav-btn.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* Main View Switcher (Meetings vs Registrations) */
+    .view-switcher-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 22px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      width: fit-content;
+    }
+    .view-switch-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .view-switch-btn.active {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .page-title h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-title p { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+
+    .btn-create {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-create:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+    }
+
+    /* Filter & Search Bar */
+    .filter-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover { color: #cbd5e1; background: rgba(255, 255, 255, 0.05); }
+    .tab-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .search-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 8px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      min-width: 260px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+
+    /* KPI Summary Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .kpi-card .kpi-num {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .kpi-card .kpi-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* Meeting Cards Grid */
+    .meetings-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .meeting-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 20px;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+    }
+    .meeting-card:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.07);
+    }
+    .m-left { display: flex; flex-direction: column; gap: 8px; }
+    .m-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-scheduled { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-progress { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-completed { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-type { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+
+    .m-title { font-size: 1.15rem; font-weight: 700; color: #fff; margin-top: 2px; }
+    .m-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .m-meta-item { display: flex; align-items: center; gap: 6px; }
+    .m-agenda {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .m-attendees {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .attendee-pill {
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 8px;
+      border-radius: 6px;
+      color: #cbd5e1;
+    }
+
+    .m-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+    }
+    .btn-act {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .btn-act-scan {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+    .btn-act-room {
+      background: linear-gradient(135deg, #a855f7, #7e22ce);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+    }
+    .btn-act-reg {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }
+    .btn-act-sub {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+    }
+    .btn-act-sub:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Registrations Table View */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+    .reg-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      text-align: left;
+    }
+    .reg-table th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 14px 16px;
+      color: #cbd5e1;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .reg-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #f1f5f9;
+      vertical-align: middle;
+    }
+    .reg-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+    /* Approval queue layout: keep Status + Action visible on the right */
+    .reg-table {
+      min-width: 1120px;
+    }
+
+    .reg-table-scroll {
+      overflow-x: auto;
+      position: relative;
+      scrollbar-color: #475569 #111827;
+      scrollbar-width: thin;
+    }
+
+    .reg-table th:last-child,
+    .reg-table td:last-child {
+      position: sticky;
+      right: 0;
+      min-width: 245px;
+      width: 245px;
+      background: #1d2533;
+      z-index: 4;
+      box-shadow: -12px 0 24px rgba(2, 6, 23, 0.30);
+    }
+
+    .reg-table thead th:last-child {
+      z-index: 6;
+      background: #252d3b;
+    }
+
+    .reg-table tbody tr:hover td:last-child {
+      background: #222c3c;
+    }
+
+    .approval-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 9px;
+    }
+
+    .approval-cell .status-badge {
+      align-self: flex-start;
+    }
+
+    .approval-actions {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .approval-actions .nav-btn {
+      flex: 1 1 92px;
+      min-height: 34px;
+      justify-content: center;
+    }
+
+    .approval-note {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 760px) {
+      .reg-table {
+        min-width: 900px;
+      }
+
+      .reg-table th:last-child,
+      .reg-table td:last-child {
+        min-width: 205px;
+        width: 205px;
+      }
+
+      .approval-actions {
+        flex-direction: column;
+      }
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-badge.pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+    .status-badge.approved { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+    .status-badge.rejected { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+    .status-badge.cancelled { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.35); }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 8, 17, 0.8);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 26px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+    .modal-header h2 { font-size: 1.25rem; font-weight: 700; color: #fff; }
+    .btn-close {
+      background: rgba(255, 255, 255, 0.06);
+      border: none;
+      color: #94a3b8;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .btn-close:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-full { grid-column: span 2; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 0.82rem; font-weight: 600; color: #cbd5e1; }
+    .form-input, .form-select, .form-textarea {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--primary); }
+
+    .gps-toggle-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 6px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 16px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--card-bg);
+      border: 1px dashed var(--border);
+      border-radius: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .meeting-card { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-full { grid-column: span 1; }
+      .view-switcher-bar { width: 100%; justify-content: space-around; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="brand-icon">📅</div>
+      <div>
+        <div style="font-weight:700; font-size:1.1rem;">ระบบจัดการการประชุม</div>
+        <div style="font-size:0.75rem; color:#94a3b8;">Meeting &amp; Registration Center (v2/v4)</div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="admin.html" class="nav-btn" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #c7d2fe;">⚙️ เมนูผู้ดูแลระบบ</a>
+      <a href="dashboard.html" class="nav-btn">📊 แดชบอร์ด</a>
+      <a href="smart-room.html" class="nav-btn">🎙️ ห้องประชุม AI</a>
+      <a href="config.html" class="nav-btn">🔧 ตั้งค่าระบบ</a>
+      <a href="index.html" class="nav-btn">🏠 หน้าหลักผู้ใช้</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Top View Switcher -->
+    <div class="view-switcher-bar">
+      <button class="view-switch-btn active" id="btnViewMeetings" onclick="switchMainView('meetings')">
+        <span>📅 รายการการประชุม (Meetings List)</span>
+      </button>
+      <button class="view-switch-btn" id="btnViewRegistrations" onclick="switchMainView('registrations')">
+        <span>👥 คำขอลงทะเบียน &amp; อนุมัติ (Registrations &amp; Approval)</span>
+      </button>
+      <button class="view-switch-btn" id="btnViewAttendance" onclick="switchMainView('attendance')">
+        <span>📊 การเข้าร่วมประชุม &amp; สรุปผล (Attendance &amp; Summary)</span>
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: MEETINGS LIST                      -->
+    <!-- ========================================== -->
+    <section id="sectionMeetingsView">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>นัดหมายและตารางการประชุม (Meetings)</h1>
+          <p>สร้าง จัดการ และติดตามการประชุมขององค์กร พร้อมระบบ Geofence GPS</p>
+        </div>
+        <button class="btn-create" id="btnOpenCreate" onclick="openMeetingModal()">
+          <span>+ สร้างการประชุมใหม่</span>
+        </button>
+      </div>
+
+      <!-- Filter & Search Bar -->
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button class="tab-btn active" onclick="setFilter('all', this)">ทั้งหมด (All)</button>
+          <button class="tab-btn" onclick="setFilter('scheduled', this)">นัดหมายแล้ว (Scheduled)</button>
+          <button class="tab-btn" onclick="setFilter('in_progress', this)">กำลังดำเนินการ (Active)</button>
+          <button class="tab-btn" onclick="setFilter('completed', this)">เสร็จสิ้น (Completed)</button>
+        </div>
+        <input type="text" class="search-input" id="searchMeeting" placeholder="🔍 ค้นหาตามชื่อ, ห้อง, ผู้จัด..." oninput="renderMeetings()">
+      </div>
+
+      <!-- Meeting Cards List -->
+      <div class="meetings-grid" id="meetingsContainer">
+        <div class="empty-state">
+          <p>กำลังโหลดข้อมูลการประชุม...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: REGISTRATIONS & APPROVAL (STEP 4)  -->
+    <!-- ========================================== -->
+    <section id="sectionRegistrationsView" style="display:none;">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>คำขอลงทะเบียนเข้าร่วมประชุม (Registration Requests &amp; Approval)</h1>
+          <p>ตรวจสอบและอนุมัติผู้เข้าร่วมประชุม (บันทึกตรงสู่ Google Sheets พร้อมระบุผู้ลงนามอนุมัติ)</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <a href="meeting-register.html" class="btn-act btn-act-reg" style="width:auto; padding:10px 18px;">
+            <span>📝 หน้าลงทะเบียนผู้เข้าร่วม</span>
+          </a>
+          <button class="nav-btn" onclick="loadRegistrations()" style="display:flex; align-items:center; gap:6px;">
+            <span>🔄 รีเฟรช</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-num" id="kpiTotalReg">-</div>
+          <div class="kpi-label">คำขอทั้งหมด (Total)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(245,158,11,0.3);">
+          <div class="kpi-num" id="kpiPendingReg" style="color:#fbbf24;">-</div>
+          <div class="kpi-label">⏳ รอการอนุมัติ (Pending)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(16,185,129,0.3);">
+          <div class="kpi-num" id="kpiApprovedReg" style="color:#34d399;">-</div>
+          <div class="kpi-label">✅ อนุมัติแล้ว (Approved)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(239,68,68,0.3);">
+          <div class="kpi-num" id="kpiRejectedReg" style="color:#f87171;">-</div>
+          <div class="kpi-label">❌ ไม่อนุมัติ (Rejected)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(100,116,139,0.3);">
+          <div class="kpi-num" id="kpiCancelledReg" style="color:#94a3b8;">-</div>
+          <div class="kpi-label">🚫 ยกเลิก (Cancelled)</div>
+        </div>
+      </div>
+
+      <!-- Filter Controls for Registrations -->
+      <div class="filter-bar">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div>
+            <label style="font-size:0.8rem; color:#94a3b8; margin-right:6px;">เลือกการประชุม:</label>
+            <select id="selectMeetingFilter" class="form-select" style="padding:6px 12px; font-size:0.85rem;" onchange="loadRegistrations()">
+              <option value="ALL">-- ทุกการประชุม (All Meetings) --</option>
+            </select>
+          </div>
+
+          <div class="filter-tabs">
+            <button class="tab-btn active" id="btnTabAllReg" onclick="setStatusFilter('ALL', this)">ทั้งหมด</button>
+            <button class="tab-btn" id="btnTabPendingReg" onclick="setStatusFilter('PENDING', this)">⏳ รออนุมัติ</button>
+            <button class="tab-btn" id="btnTabApprovedReg" onclick="setStatusFilter('APPROVED', this)">✅ อนุมัติแล้ว</button>
+            <button class="tab-btn" id="btnTabRejectedReg" onclick="setStatusFilter('REJECTED', this)">❌ ไม่อนุมัติ</button>
+            <button class="tab-btn" id="btnTabCancelledReg" onclick="setStatusFilter('CANCELLED', this)">🚫 ยกเลิก</button>
+          </div>
+        </div>
+
+        <input type="text" class="search-input" id="searchRegistration" placeholder="🔍 ค้นหาตามชื่อ, รหัส, อีเมล..." oninput="filterRegistrations()">
+      </div>
+
+      <!-- Registrations Table -->
+      <div class="table-container">
+        <div class="reg-table-scroll">
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>รหัสลงทะเบียน</th>
+                <th>การประชุม</th>
+                <th>ผู้ลงทะเบียน</th>
+                <th>ประเภท</th>
+                <th>สังกัด / หน่วยงาน</th>
+                <th>ตำแหน่ง</th>
+                <th>วันที่ลงทะเบียน</th>
+                <th>สถานะ / การอนุมัติ</th>
+              </tr>
+            </thead>
+            <tbody id="registrationsTbody">
+              <tr>
+                <td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">กำลังโหลดข้อมูลคำขอลงทะเบียน...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: ATTENDANCE & SUMMARY (STEP 5)      -->
+    <!-- ========================================== -->
+    <section id="sectionAttendanceView" style="display:none;">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>รายงานการเข้าร่วมประชุม (Meeting Attendance &amp; Tracking)</h1>
+          <p>ตรวจสอบสถิติ Check-in / Check-out, สถานะตรงเวลา/มาสาย และสรุปผลการประชุม (Google Sheets)</p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="meeting-scan.html" class="btn-act btn-act-scan" style="width:auto; padding:10px 18px;">
+            <span>📷 หน้าสแกน Check-in / Check-out</span>
+          </a>
+          <button class="btn-act" id="btnFinalizeMeeting" onclick="handleFinalizeMeeting()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; box-shadow:0 4px 14px rgba(236,72,153,0.35);">
+            <span>🔒 สรุปผลการประชุม (Finalize)</span>
+          </button>
+          <button class="nav-btn" onclick="loadAttendanceView()" style="display:flex; align-items:center; gap:6px;">
+            <span>🔄 รีเฟรช</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Meeting Selector Bar -->
+      <div class="filter-bar">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div>
+            <label style="font-size:0.85rem; font-weight:600; color:#cbd5e1; margin-right:8px;">📅 เลือกการประชุม:</label>
+            <select id="selectAttMeeting" class="form-select" style="padding:8px 14px; font-size:0.9rem; min-width:320px;" onchange="onAttMeetingChange()">
+              <option value="">-- กำลังโหลดรายการประชุม --</option>
+            </select>
+          </div>
+          <div id="attMeetingStatusBadge"></div>
+        </div>
+        <input type="text" class="search-input" id="searchAttendance" placeholder="🔍 ค้นหาตามชื่อ, รหัส..." oninput="filterAttendanceTable()">
+      </div>
+
+      <!-- KPI Summary Cards (9 Cards) -->
+      <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+        <div class="kpi-card" style="border-color:rgba(99,102,241,0.3);">
+          <div class="kpi-num" id="kpiAttApproved" style="color:#a5b4fc;">0</div>
+          <div class="kpi-label">ได้รับอนุมัติ (Approved)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(16,185,129,0.3);">
+          <div class="kpi-num" id="kpiAttCheckedIn" style="color:#34d399;">0</div>
+          <div class="kpi-label">Check-in แล้ว</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(59,130,246,0.3);">
+          <div class="kpi-num" id="kpiAttCheckedOut" style="color:#60a5fa;">0</div>
+          <div class="kpi-label">Check-out แล้ว</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(16,185,129,0.3);">
+          <div class="kpi-num" id="kpiAttOnTime" style="color:#6ee7b7;">0</div>
+          <div class="kpi-label">🟢 ตรงเวลา (ON_TIME)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(245,158,11,0.3);">
+          <div class="kpi-num" id="kpiAttLate" style="color:#fcd34d;">0</div>
+          <div class="kpi-label">🟡 มาสาย (LATE)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(239,68,68,0.3);">
+          <div class="kpi-num" id="kpiAttLateCritical" style="color:#fca5a5;">0</div>
+          <div class="kpi-label">🔴 สายเกินเกณฑ์ (CRITICAL)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(245,158,11,0.3);">
+          <div class="kpi-num" id="kpiAttEarlyLeave" style="color:#fbbf24;">0</div>
+          <div class="kpi-label">⚠️ ออกก่อน (EARLY)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(239,68,68,0.3);">
+          <div class="kpi-num" id="kpiAttIncomplete" style="color:#f87171;">0</div>
+          <div class="kpi-label">⚠️ ไม่สมบูรณ์ (INCOMPLETE)</div>
+        </div>
+        <div class="kpi-card" style="border-color:rgba(100,116,139,0.3);">
+          <div class="kpi-num" id="kpiAttAbsent" style="color:#cbd5e1;">0</div>
+          <div class="kpi-label">⚪ ไม่เข้าร่วม (ABSENT)</div>
+        </div>
+      </div>
+
+      <!-- Attendance Records Table -->
+      <div class="table-container">
+        <div style="overflow-x:auto;">
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>ผู้เข้าร่วม</th>
+                <th>รหัสพนักงาน</th>
+                <th>ประเภท</th>
+                <th>เวลาเข้า (In)</th>
+                <th>เวลาออก (Out)</th>
+                <th>สถานะเวลาเข้า</th>
+                <th>สถานะสุดท้าย</th>
+                <th>Face Verified</th>
+                <th>GPS Geofence</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceTbody">
+              <tr>
+                <td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">กรุณาเลือกการประชุมเพื่อดูข้อมูล</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Create / Edit Meeting Modal -->
+  <div class="modal-overlay" id="meetingModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modalTitle">สร้างการประชุมใหม่</h2>
+        <button class="btn-close" onclick="closeMeetingModal()">&times;</button>
+      </div>
+
+      <form id="meetingForm" onsubmit="handleSaveMeeting(event)">
+        <input type="hidden" id="editMeetingId">
+
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label class="form-label">หัวข้อการประชุม (Meeting Title) *</label>
+            <input type="text" id="mTitle" class="form-input" placeholder="เช่น การประชุมวางแผน AI Sprint Q3" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">วันที่จัดประชุม (Date) *</label>
+            <input type="date" id="mDate" class="form-input" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">เวลาเริ่ม - สิ้นสุด *</label>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="time" id="mStartTime" class="form-input" style="flex:1;" required>
+              <span>-</span>
+              <input type="time" id="mEndTime" class="form-input" style="flex:1;" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ประเภทสถานที่ (Type)</label>
+            <select id="mLocationType" class="form-select" onchange="toggleGpsFields()">
+              <option value="onsite">🏢 ประชุมที่ห้องประชุม (Onsite)</option>
+              <option value="hybrid">🌐 ไฮบริด (Hybrid Onsite + Online)</option>
+              <option value="online">💻 ออนไลน์ (Online Meet/Zoom)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ห้องประชุม / ลิงก์ออนไลน์ *</label>
+            <input type="text" id="mRoom" class="form-input" placeholder="เช่น ห้อง 401 อาคาร 1 หรือ Google Meet link" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ผู้จัดประชุม (Organizer)</label>
+            <input type="text" id="mOrganizer" class="form-input" placeholder="เช่น สมชาย ใจดี (HR Lead)">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">แผนก (Department)</label>
+            <input type="text" id="mDepartment" class="form-input" placeholder="เช่น เทคโนโลยีและวิศวกรรม (Tech)">
+          </div>
+
+          <div class="form-group form-full">
+            <label class="form-label">ผู้เข้าร่วมประชุม (ระบุรายชื่อหรือคั่นด้วยจุลภาค)</label>
+            <input type="text" id="mParticipants" class="form-input" placeholder="สมชาย ใจดี, วิภาดา รักเรียน, กิตติศักดิ์ พัฒนา">
+          </div>
+
+          <!-- GPS Validation Settings -->
+          <div class="form-group form-full gps-toggle-box" id="gpsBox">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:0.88rem;">
+                <input type="checkbox" id="mGpsRequired" checked onchange="toggleGpsFields()">
+                <span>📍 กำหนดเงื่อนไข GPS ตรวจสอบผู้เข้าร่วมหน้าห้อง</span>
+              </label>
+              <button type="button" class="nav-btn" style="padding:4px 10px; font-size:0.75rem;" onclick="fetchCurrentGps()">
+                📍 ดึงพิกัดปัจจุบัน
+              </button>
+            </div>
+            <div id="gpsInputs" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+              <div>
+                <label class="form-label" style="font-size:0.75rem;">Latitude</label>
+                <input type="number" step="any" id="mGpsLat" class="form-input" value="13.8198">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:0.75rem;">Longitude</label>
+                <input type="number" step="any" id="mGpsLng" class="form-input" value="100.5144">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:0.75rem;">รัศมี (เมตร)</label>
+                <input type="number" id="mGpsRadius" class="form-input" value="300">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group form-full">
+            <label class="form-label">วาระการประชุม (Agenda)</label>
+            <textarea id="mAgenda" class="form-textarea" rows="3" placeholder="1. วาระเรื่องแจ้งเพื่อทราบ&#10;2. วาระเรื่องพิจารณา"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="nav-btn" onclick="closeMeetingModal()">ยกเลิก</button>
+          <button type="submit" class="btn-create" id="btnSaveMeeting">บันทึกการประชุม</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rejection Modal (Requires Remark) -->
+  <div class="modal-overlay" id="rejectModal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h2 style="color:#f87171;">❌ ระบุเหตุผลการไม่อนุมัติ</h2>
+        <button class="btn-close" onclick="closeRejectModal()">&times;</button>
+      </div>
+      <form id="formReject" onsubmit="submitRejection(event)">
+        <input type="hidden" id="rejectRegId">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label">เหตุผลที่ไม่อนุมัติ (Remark) <span style="color:#f87171;">*</span></label>
+          <textarea id="rejectRemark" class="form-textarea" rows="3" placeholder="เช่น จำนวนผู้เข้าร่วมเต็ม, ข้อมูลไม่ครบถ้วน, นอกเวลาที่กำหนด..." required></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="nav-btn" onclick="closeRejectModal()">ยกเลิก</button>
+          <button type="submit" class="btn-act" style="background:#ef4444; color:#fff; width:auto; padding:8px 18px;" id="btnConfirmReject">
+            <span>ยืนยันไม่อนุมัติ</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Generic Confirmation Modal (works inside AI Studio preview iframe) -->
+  <div class="modal-overlay" id="confirmActionModal">
+    <div class="modal-box" style="max-width:460px;">
+      <div class="modal-header">
+        <h2 id="confirmActionTitle">ยืนยันการดำเนินการ</h2>
+        <button class="btn-close" type="button" onclick="resolveConfirmAction(false)">&times;</button>
+      </div>
+      <div style="padding:18px 4px 8px; color:#cbd5e1; line-height:1.65; font-size:0.95rem;" id="confirmActionMessage"></div>
+      <div class="modal-footer">
+        <button type="button" class="nav-btn" onclick="resolveConfirmAction(false)">ยกเลิก</button>
+        <button type="button" class="btn-act" id="confirmActionOk" style="background:#10b981; color:#fff; width:auto; padding:8px 18px;" onclick="resolveConfirmAction(true)">
+          ยืนยัน
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let confirmActionResolver = null;
+
+    function showConfirmAction(message, options = {}) {
+      const modal = document.getElementById('confirmActionModal');
+      const title = document.getElementById('confirmActionTitle');
+      const msg = document.getElementById('confirmActionMessage');
+      const ok = document.getElementById('confirmActionOk');
+
+      title.textContent = options.title || 'ยืนยันการดำเนินการ';
+      msg.textContent = message || 'ต้องการดำเนินการต่อหรือไม่?';
+      ok.textContent = options.okText || 'ยืนยัน';
+      ok.style.background = options.danger ? '#ef4444' : '#10b981';
+      modal.classList.add('active');
+
+      return new Promise(resolve => {
+        confirmActionResolver = resolve;
+      });
+    }
+
+    function resolveConfirmAction(result) {
+      document.getElementById('confirmActionModal').classList.remove('active');
+      if (confirmActionResolver) {
+        const resolver = confirmActionResolver;
+        confirmActionResolver = null;
+        resolver(Boolean(result));
+      }
+    }
+
+    let allMeetings = [];
+    let allRegistrations = [];
+    let currentFilter = 'all';
+    let currentRegStatusFilter = 'ALL';
+
+    // View Switcher
+    function switchMainView(mode, targetMeetingId = null) {
+      const secM = document.getElementById('sectionMeetingsView');
+      const secR = document.getElementById('sectionRegistrationsView');
+      const secA = document.getElementById('sectionAttendanceView');
+      const btnM = document.getElementById('btnViewMeetings');
+      const btnR = document.getElementById('btnViewRegistrations');
+      const btnA = document.getElementById('btnViewAttendance');
+
+      secM.style.display = 'none';
+      secR.style.display = 'none';
+      secA.style.display = 'none';
+      btnM.classList.remove('active');
+      btnR.classList.remove('active');
+      btnA.classList.remove('active');
+
+      if (mode === 'meetings') {
+        secM.style.display = 'block';
+        btnM.classList.add('active');
+      } else if (mode === 'registrations') {
+        secR.style.display = 'block';
+        btnR.classList.add('active');
+
+        // Admin workflow: show the approval queue first.
+        currentRegStatusFilter = 'PENDING';
+        document.querySelectorAll('#sectionRegistrationsView .tab-btn')
+          .forEach(b => b.classList.remove('active'));
+        document.getElementById('btnTabPendingReg')?.classList.add('active');
+
+        // V4.13: select the meeting BEFORE loading registrations.
+        // The previous code loaded ALL rows first, then changed the dropdown,
+        // so Admin could show an empty list even though the registration had
+        // just been verified successfully for this meeting.
+        const select = document.getElementById('selectMeetingFilter');
+
+        if (targetMeetingId && select) {
+          select.value = targetMeetingId;
+          loadRegistrations(targetMeetingId);
+        } else {
+          loadRegistrations();
+        }
+
+      } else if (mode === 'attendance') {
+        secA.style.display = 'block';
+        btnA.classList.add('active');
+        loadAttendanceView(targetMeetingId);
+      }
+    }
+
+    // Load Meetings
+    async function loadMeetings() {
+      try {
+        const list = await apiFetch('getMeetings');
+        allMeetings = Array.isArray(list) ? list : (list?.data || []);
+        populateMeetingSelectFilter();
+        renderMeetings();
+      } catch (err) {
+        showToast('ไม่สามารถโหลดข้อมูลการประชุมได้', 'error');
+      }
+    }
+
+    function populateMeetingSelectFilter() {
+      const select = document.getElementById('selectMeetingFilter');
+      if (!select) return;
+      const cur = select.value;
+      select.innerHTML = '<option value="ALL">-- ทุกการประชุม (All Meetings) --</option>';
+      allMeetings.forEach(m => {
+        const id = m.meeting_id || m.id;
+        const title = m.meeting_title || m.title || 'การประชุม';
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${title} (${id})`;
+        select.appendChild(opt);
+      });
+      if (cur) select.value = cur;
+    }
+
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('#sectionMeetingsView .tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderMeetings();
+    }
+
+    function bangkokDateTimeParts(value) {
+      if (!value) return null;
+
+      const text = String(value).trim();
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        const [year, month, day] = text.split('-').map(Number);
+        return { year, month, day };
+      }
+
+      const d = new Date(text);
+      if (Number.isNaN(d.getTime())) return null;
+
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(d);
+
+      const map = {};
+      parts.forEach(p => {
+        if (p.type !== 'literal') map[p.type] = p.value;
+      });
+
+      return {
+        year: Number(map.year),
+        month: Number(map.month),
+        day: Number(map.day),
+        hour: map.hour,
+        minute: map.minute
+      };
+    }
+
+    function meetingDateForInput(value) {
+      if (!value) return '';
+
+      const text = String(value).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+      const p = bangkokDateTimeParts(value);
+      if (!p) return '';
+
+      return `${String(p.year).padStart(4,'0')}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`;
+    }
+
+    function meetingTimeForInput(value) {
+      if (!value) return '';
+
+      const text = String(value).trim();
+
+      if (/^\d{1,2}:\d{2}/.test(text)) {
+        const [hour, minute] = text.split(':');
+        return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+      }
+
+      const p = bangkokDateTimeParts(value);
+      if (!p || p.hour === undefined) return '';
+
+      return `${String(p.hour).padStart(2,'0')}:${String(p.minute).padStart(2,'0')}`;
+    }
+
+    function formatMeetingDateDisplay(value) {
+      const normalized = meetingDateForInput(value);
+      if (!normalized) return value || '-';
+
+      const [year, month, day] = normalized.split('-').map(Number);
+      return `${day}/${month}/${year + 543}`;
+    }
+
+    function formatMeetingTimeDisplay(value) {
+      return meetingTimeForInput(value) || value || '--:--';
+    }
+
+    function renderMeetings() {
+      const container = document.getElementById('meetingsContainer');
+      const search = (document.getElementById('searchMeeting').value || '').toLowerCase().trim();
+
+      let filtered = allMeetings.filter(m => {
+        const status = (m.status || 'scheduled').toLowerCase();
+        if (currentFilter !== 'all' && status !== currentFilter && (currentFilter === 'scheduled' && status !== 'open')) return false;
+        if (search) {
+          const matchTitle = (m.meeting_title || m.title || '').toLowerCase().includes(search);
+          const matchRoom = (m.location_name || m.room || '').toLowerCase().includes(search);
+          const matchOrg = (m.organizer || '').toLowerCase().includes(search);
+          const matchDept = (m.department || '').toLowerCase().includes(search);
+          return matchTitle || matchRoom || matchOrg || matchDept;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size:36px; margin-bottom:10px;">📅</div>
+            <h3 style="color:#f1f5f9;">ไม่พบรายการประชุม</h3>
+            <p style="color:#94a3b8; font-size:0.9rem; margin-top:4px;">ลองเปลี่ยนคำค้นหา หรือกดปุ่ม "สร้างการประชุมใหม่" ด้านบน</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(m => {
+        const id = m.meeting_id || m.id;
+        const title = m.meeting_title || m.title || 'การประชุม';
+        const date = m.meeting_date || m.date || '-';
+        const startTime = m.start_time || m.startTime || '--:--';
+        const endTime = m.end_time || m.endTime || '--:--';
+        const room = m.location_name || m.room || '-';
+        const organizer = m.organizer || '-';
+        const department = m.department || 'ทั่วไป';
+
+        const statusRaw = (m.status || 'OPEN').toUpperCase();
+        let statusBadge = '<span class="badge badge-scheduled">⏳ เปิดรับ / นัดหมาย</span>';
+        if (statusRaw === 'COMPLETED' || statusRaw === 'CLOSED') {
+          statusBadge = '<span class="badge badge-completed">✓ เสร็จสิ้น</span>';
+        } else if (statusRaw === 'IN_PROGRESS' || statusRaw === 'ACTIVE') {
+          statusBadge = '<span class="badge badge-progress">⚡ กำลังประชุม</span>';
+        }
+
+        const typeBadge = m.locationType === 'online' ? '💻 Online' : (m.locationType === 'hybrid' ? '🌐 Hybrid' : '🏢 Onsite');
+        const attendeesList = Array.isArray(m.participants) ? m.participants : (m.participants ? String(m.participants).split(',') : []);
+
+        return `
+          <div class="meeting-card">
+            <div class="m-left">
+              <div class="m-header">
+                <span class="badge badge-type">${typeBadge}</span>
+                ${statusBadge}
+                ${m.gpsRequired || m.gps_required ? '<span class="badge" style="background:rgba(236,72,153,0.15); color:#f472b6; border:1px solid rgba(236,72,153,0.3);">📍 GPS Geofence</span>' : ''}
+                <span style="font-size:0.75rem; color:#94a3b8; font-family:monospace; margin-left:auto;">${id}</span>
+              </div>
+
+              <h2 class="m-title">${escapeHtml(title)}</h2>
+
+              <div class="m-meta">
+                <div class="m-meta-item">
+                  <span>📅</span> <strong>${formatMeetingDateDisplay(date)}</strong>
+                </div>
+                <div class="m-meta-item">
+                  <span>⏰</span> <strong>${formatMeetingTimeDisplay(startTime)} - ${formatMeetingTimeDisplay(endTime)} น.</strong>
+                </div>
+                <div class="m-meta-item">
+                  <span>📍</span> <span>${escapeHtml(room)}</span>
+                </div>
+                <div class="m-meta-item">
+                  <span>👤</span> <span>${escapeHtml(organizer)} (${escapeHtml(department)})</span>
+                </div>
+              </div>
+
+              ${m.agenda ? `<div class="m-agenda"><strong>📋 วาระ:</strong> ${escapeHtml(m.agenda)}</div>` : ''}
+
+              <div class="m-attendees">
+                <span style="font-size:0.75rem; color:#94a3b8;">ผู้เข้าร่วมที่กำหนด (${attendeesList.length}):</span>
+                ${attendeesList.map(a => `<span class="attendee-pill">${escapeHtml(a.trim())}</span>`).join('')}
+              </div>
+            </div>
+
+            <div class="m-actions">
+              <button class="btn-act btn-act-reg" onclick="switchMainView('registrations', '${id}')">
+                <span>👥 คำขอลงทะเบียน</span>
+              </button>
+              <a href="meeting-scan.html?meetingId=${id}" class="btn-act btn-act-scan">
+                <span>📷 สแกนเช็คชื่อ (v3)</span>
+              </a>
+              <a href="smart-room.html?meetingId=${id}" class="btn-act btn-act-room">
+                <span>🎙️ Smart Room AI (v4-v6)</span>
+              </a>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-act btn-act-sub" style="flex:1;" onclick="openEditMeeting('${id}')">✏️ แก้ไข</button>
+                <button class="btn-act btn-act-sub" style="color:#f87171;" onclick="handleDeleteMeeting('${id}')">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================
+    // REGISTRATIONS MANAGEMENT (STEP 4)
+    // =========================================================
+
+    async function loadRegistrations(forcedMeetingId = null) {
+      const tbody = document.getElementById('registrationsTbody');
+      const select = document.getElementById('selectMeetingFilter');
+
+      if (forcedMeetingId && select) {
+        select.value = forcedMeetingId;
+      }
+
+      const selectedMeetingId =
+        select && select.value && select.value !== 'ALL'
+          ? String(select.value).trim()
+          : '';
+
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">
+            กำลังดึงคำขอลงทะเบียน${selectedMeetingId ? 'ของการประชุมที่เลือก' : ''}จาก Google Sheets...
+          </td>
+        </tr>`;
+
+      // Reset KPI while loading so stale values are not mistaken for current data.
+      ['kpiTotalReg','kpiPendingReg','kpiApprovedReg','kpiRejectedReg','kpiCancelledReg']
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = '...';
+        });
+
+      try {
+        const query = selectedMeetingId
+          ? { meeting_id: selectedMeetingId }
+          : {};
+
+        // IMPORTANT V4.13:
+        // Use the same meeting-scoped getRegistrations call that the
+        // registration success verification uses on the server.
+        const res = await apiFetch('getRegistrations', query);
+
+        if (!res || res.success === false) {
+          throw new Error(
+            res?.message ||
+            res?.error ||
+            'Google Sheets ไม่ส่งรายการคำขอลงทะเบียนกลับมา'
+          );
+        }
+
+        const rows = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.registrations)
+              ? res.registrations
+              : [];
+
+        allRegistrations = rows;
+
+        // Calculate KPIs from the SAME rows shown in the table.
+        // This avoids a second request returning a different/error state.
+        const statusOf = r =>
+          String(r?.approval_status || r?.status || 'PENDING')
+            .trim()
+            .toUpperCase();
+
+        const summary = {
+          total: rows.length,
+          pending: rows.filter(r => statusOf(r) === 'PENDING').length,
+          approved: rows.filter(r => statusOf(r) === 'APPROVED').length,
+          rejected: rows.filter(r => statusOf(r) === 'REJECTED').length,
+          cancelled: rows.filter(r => statusOf(r) === 'CANCELLED').length
+        };
+
+        document.getElementById('kpiTotalReg').textContent = summary.total;
+        document.getElementById('kpiPendingReg').textContent = summary.pending;
+        document.getElementById('kpiApprovedReg').textContent = summary.approved;
+        document.getElementById('kpiRejectedReg').textContent = summary.rejected;
+        document.getElementById('kpiCancelledReg').textContent = summary.cancelled;
+
+        filterRegistrations();
+
+      } catch (err) {
+        console.error('Failed to load registrations:', err);
+
+        allRegistrations = [];
+
+        ['kpiTotalReg','kpiPendingReg','kpiApprovedReg','kpiRejectedReg','kpiCancelledReg']
+          .forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '!';
+          });
+
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align:center; padding:34px;">
+              <div style="
+                max-width:760px;
+                margin:0 auto;
+                padding:18px 20px;
+                border:1px solid rgba(248,113,113,.45);
+                border-radius:14px;
+                background:rgba(127,29,29,.18);
+                color:#fecaca;
+                line-height:1.65;">
+                <div style="font-size:1rem; font-weight:800; margin-bottom:6px;">
+                  ❌ โหลดคำขอลงทะเบียนจาก Google Sheets ไม่สำเร็จ
+                </div>
+                <div>${escapeHtml(err.message || String(err))}</div>
+                <div style="margin-top:10px; color:#cbd5e1; font-size:.82rem;">
+                  ระบบจะไม่แสดงคำว่า “ไม่มีคำขอ” เมื่อแหล่งข้อมูลมีปัญหาอีกต่อไป
+                </div>
+              </div>
+            </td>
+          </tr>`;
+      }
+    }
+
+    function setStatusFilter(status, btn) {
+      currentRegStatusFilter = status;
+      document.querySelectorAll('#sectionRegistrationsView .tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      filterRegistrations();
+    }
+
+    function filterRegistrations() {
+      const tbody = document.getElementById('registrationsTbody');
+      const selectedMtg = document.getElementById('selectMeetingFilter').value;
+      const search = (document.getElementById('searchRegistration').value || '').toLowerCase().trim();
+
+      const filtered = allRegistrations.filter(r => {
+        // Filter by meeting
+        if (selectedMtg !== 'ALL' && r.meeting_id !== selectedMtg) return false;
+
+        // Filter by status
+        const status = (r.approval_status || r.status || 'PENDING').toUpperCase();
+        if (currentRegStatusFilter !== 'ALL' && status !== currentRegStatusFilter) return false;
+
+        // Filter by search term
+        if (search) {
+          const matchName = (r.fullname || '').toLowerCase().includes(search);
+          const matchNameEn = (r.fullname_en || '').toLowerCase().includes(search);
+          const matchId = (r.registration_id || '').toLowerCase().includes(search);
+          const matchEmp = (r.employee_code || '').toLowerCase().includes(search);
+          const matchOrg = (r.organization || r.department || '').toLowerCase().includes(search);
+          const matchEmail = (r.email || '').toLowerCase().includes(search);
+          const matchPhone = (r.phone || '').toLowerCase().includes(search);
+          return matchName || matchNameEn || matchId || matchEmp || matchOrg || matchEmail || matchPhone;
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">
+              <div style="font-size:32px; margin-bottom:8px;">📭</div>
+              ไม่พบคำขอลงทะเบียนในสถานะ/การประชุมที่เลือก
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => {
+        const regId = r.registration_id || '-';
+        const meetingId = r.meeting_id || '-';
+        const mtgObj = allMeetings.find(m => (m.meeting_id || m.id) === meetingId);
+        const meetingTitle = mtgObj ? (mtgObj.meeting_title || mtgObj.title) : meetingId;
+
+        const type = (r.participant_type || 'INTERNAL').toUpperCase();
+        const typeBadge = type === 'EXTERNAL'
+          ? '<span style="color:#38bdf8; font-weight:600;">🌐 ภายนอก</span>'
+          : '<span style="color:#a78bfa; font-weight:600;">🏢 ภายใน</span>';
+
+        const deptOrg = type === 'EXTERNAL'
+          ? (r.organization || r.affiliation || r.department || '-')
+          : `${r.department || r.affiliation || r.organization || '-'} ${r.employee_code ? `(${r.employee_code})` : ''}`;
+
+        const status = (r.approval_status || r.status || 'PENDING').toUpperCase();
+        let badge = '<span class="status-badge pending">⏳ รออนุมัติ</span>';
+        if (status === 'APPROVED') badge = '<span class="status-badge approved">✅ อนุมัติแล้ว</span>';
+        else if (status === 'REJECTED') badge = '<span class="status-badge rejected">❌ ไม่อนุมัติ</span>';
+        else if (status === 'CANCELLED') badge = '<span class="status-badge cancelled">🚫 ยกเลิก</span>';
+
+        const regDate = r.registered_at ? new Date(r.registered_at).toLocaleDateString('th-TH') : '-';
+
+        // Action buttons based on status
+        let actionButtons = '';
+        if (status === 'PENDING') {
+          actionButtons = `
+            <div class="approval-actions">
+              <button class="nav-btn" style="background:#10b981; color:#fff; border-color:#059669; padding:6px 10px; font-weight:700;" onclick="handleApproveRegistration('${regId}')">
+                ✓ อนุมัติ
+              </button>
+              <button class="nav-btn" style="background:#ef4444; color:#fff; border-color:#dc2626; padding:6px 10px; font-weight:700;" onclick="openRejectModal('${regId}')">
+                ✕ ไม่อนุมัติ
+              </button>
+            </div>
+          `;
+        } else if (status === 'APPROVED') {
+          actionButtons = `
+            <div class="approval-note">อนุมัติโดย: ${r.approved_by || 'Admin'}</div>
+            <div class="approval-actions">
+              <button class="nav-btn" style="padding:5px 9px; font-size:0.78rem; color:#fca5a5; border-color:#7f1d1d;" onclick="handleCancelRegistration('${regId}')">
+                ยกเลิกสิทธิ์
+              </button>
+            </div>
+          `;
+        } else if (status === 'REJECTED') {
+          actionButtons = `
+            <div class="approval-note" style="color:#fca5a5;">
+              เหตุผล: ${escapeHtml(r.remark || '-')}
+            </div>
+          `;
+        } else {
+          actionButtons = `<span style="font-size:0.75rem; color:#94a3b8;">-</span>`;
+        }
+
+        return `
+          <tr>
+            <td style="font-family:monospace; font-weight:700; color:#cbd5e1;">${regId}</td>
+            <td style="max-width:180px;">
+              <div style="font-weight:600; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(meetingTitle)}">
+                ${escapeHtml(meetingTitle)}
+              </div>
+              <div style="font-size:0.72rem; color:#94a3b8; font-family:monospace;">${meetingId}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;">${escapeHtml(r.fullname || '-')}</div>
+              ${r.fullname_en ? `<div style="font-size:0.78rem; color:#cbd5e1; margin-top:2px;">${escapeHtml(r.fullname_en)}</div>` : ''}
+              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">${escapeHtml(r.email || r.phone || '')}</div>
+            </td>
+            <td>${typeBadge}</td>
+            <td>${escapeHtml(deptOrg)}</td>
+            <td>${escapeHtml(r.position || '-')}</td>
+            <td>${regDate}</td>
+            <td>
+              <div class="approval-cell">
+                ${badge}
+                ${actionButtons}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Approve Registration
+    async function handleApproveRegistration(regId) {
+      const confirmed = await showConfirmAction(
+        `ยืนยันการอนุมัติคำขอลงทะเบียน ${regId}?`,
+        { title: '✅ ยืนยันการอนุมัติ', okText: 'อนุมัติ' }
+      );
+      if (!confirmed) return;
+
+      const clickedButton = document.activeElement && document.activeElement.tagName === 'BUTTON'
+        ? document.activeElement
+        : null;
+      const originalText = clickedButton ? clickedButton.innerHTML : '';
+      if (clickedButton) {
+        clickedButton.disabled = true;
+        clickedButton.innerHTML = '⏳ กำลังอนุมัติ...';
+      }
+
+      try {
+        const res = await apiFetch('approveRegistration', {
+          registration_id: regId,
+          approved_by: 'ผู้ดูแลระบบ (Admin)'
+        }, 'POST');
+
+        if (res && res.success) {
+          showToast(res.message || 'อนุมัติการลงทะเบียนเรียบร้อยแล้ว', 'success');
+          await loadRegistrations();
+        } else {
+          showToast(res?.message || 'ไม่สามารถอนุมัติได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      } finally {
+        if (clickedButton && document.body.contains(clickedButton)) {
+          clickedButton.disabled = false;
+          clickedButton.innerHTML = originalText;
+        }
+      }
+    }
+
+    // Reject Modal & Handler
+    function openRejectModal(regId) {
+      document.getElementById('rejectRegId').value = regId;
+      document.getElementById('rejectRemark').value = '';
+      document.getElementById('rejectModal').classList.add('active');
+    }
+
+    function closeRejectModal() {
+      document.getElementById('rejectModal').classList.remove('active');
+    }
+
+    async function submitRejection(e) {
+      e.preventDefault();
+      const regId = document.getElementById('rejectRegId').value;
+      const remark = document.getElementById('rejectRemark').value.trim();
+
+      if (!remark) {
+        showToast('กรุณาระบุเหตุผลการไม่อนุมัติ', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmReject');
+      btn.disabled = true;
+      btn.textContent = 'กำลังบันทึก...';
+
+      try {
+        const res = await apiFetch('rejectRegistration', {
+          registration_id: regId,
+          approved_by: 'ผู้ดูแลระบบ (Admin)',
+          remark: remark
+        }, 'POST');
+
+        if (res && res.success) {
+          showToast('บันทึกการไม่อนุมัติเรียบร้อย', 'success');
+          closeRejectModal();
+          loadRegistrations();
+        } else {
+          showToast(res?.message || 'ไม่สามารถดำเนินการได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ยืนยันไม่อนุมัติ';
+      }
+    }
+
+    // Cancel Registration
+    async function handleCancelRegistration(regId) {
+      const confirmed = await showConfirmAction(`ยืนยันการยกเลิกคำขอ ${regId}?`, { title: 'ยืนยันการยกเลิก', okText: 'ยกเลิกคำขอ', danger: true });
+      if (!confirmed) return;
+
+      try {
+        const res = await apiFetch('cancelRegistration', {
+          registration_id: regId,
+          cancelled_by: 'ผู้ดูแลระบบ (Admin)',
+          remark: 'ผู้ดูแลระบบยกเลิกสิทธิ์'
+        }, 'POST');
+
+        if (res && res.success) {
+          showToast('ยกเลิกคำขอเรียบร้อยแล้ว', 'success');
+          loadRegistrations();
+        } else {
+          showToast(res?.message || 'ไม่สามารถยกเลิกได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      }
+    }
+
+    // =========================================================
+    // MODAL & MEETING CRUD
+    // =========================================================
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function openMeetingModal() {
+      document.getElementById('meetingForm').reset();
+      document.getElementById('editMeetingId').value = '';
+      document.getElementById('modalTitle').textContent = 'สร้างการประชุมใหม่';
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('mDate').value = today;
+      document.getElementById('mStartTime').value = '09:00';
+      document.getElementById('mEndTime').value = '10:30';
+      document.getElementById('meetingModal').classList.add('active');
+    }
+
+    function openEditMeeting(id) {
+      const m = allMeetings.find(item => (item.meeting_id || item.id) === id);
+      if (!m) return;
+      document.getElementById('editMeetingId').value = id;
+      document.getElementById('modalTitle').textContent = 'แก้ไขการประชุม';
+      document.getElementById('mTitle').value = m.meeting_title || m.title || '';
+      document.getElementById('mDate').value = meetingDateForInput(m.meeting_date || m.date || '');
+      document.getElementById('mStartTime').value = meetingTimeForInput(m.start_time || m.startTime || '');
+      document.getElementById('mEndTime').value = meetingTimeForInput(m.end_time || m.endTime || '');
+      document.getElementById('mLocationType').value = m.locationType || 'onsite';
+      document.getElementById('mRoom').value = m.location_name || m.room || '';
+      document.getElementById('mOrganizer').value = m.organizer || '';
+      document.getElementById('mDepartment').value = m.department || '';
+      document.getElementById('mParticipants').value = Array.isArray(m.participants) ? m.participants.join(', ') : (m.participants || '');
+      document.getElementById('mGpsRequired').checked = !!(m.gpsRequired || m.gps_required);
+      document.getElementById('mGpsLat').value = m.gpsLat || 13.8198;
+      document.getElementById('mGpsLng').value = m.gpsLng || 100.5144;
+      document.getElementById('mGpsRadius').value = m.gpsRadius || 300;
+      document.getElementById('mAgenda').value = m.agenda || '';
+      toggleGpsFields();
+      document.getElementById('meetingModal').classList.add('active');
+    }
+
+    function closeMeetingModal() {
+      document.getElementById('meetingModal').classList.remove('active');
+    }
+
+    function toggleGpsFields() {
+      const type = document.getElementById('mLocationType').value;
+      const chk = document.getElementById('mGpsRequired');
+      const inputs = document.getElementById('gpsInputs');
+      if (type === 'online') {
+        chk.checked = false;
+      }
+      inputs.style.display = chk.checked ? 'grid' : 'none';
+    }
+
+    function fetchCurrentGps() {
+      if (!navigator.geolocation) {
+        showToast('เบราว์เซอร์ไม่รองรับ GPS', 'error');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          document.getElementById('mGpsLat').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('mGpsLng').value = pos.coords.longitude.toFixed(6);
+          showToast('ดึงพิกัด GPS สำเร็จ', 'success');
+        },
+        err => showToast('ไม่สามารถดึงพิกัดได้: ' + err.message, 'warning'),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    async function handleSaveMeeting(e) {
+      e.preventDefault();
+      const id = document.getElementById('editMeetingId').value;
+      const participantsStr = document.getElementById('mParticipants').value;
+      const participants = participantsStr.split(',').map(s => s.trim()).filter(Boolean);
+      const title = document.getElementById('mTitle').value.trim();
+      const date = document.getElementById('mDate').value;
+      const startTime = document.getElementById('mStartTime').value;
+      const endTime = document.getElementById('mEndTime').value;
+      const room = document.getElementById('mRoom').value.trim();
+      const organizer = document.getElementById('mOrganizer').value.trim();
+      const department = document.getElementById('mDepartment').value.trim();
+
+      // Ensure minimum_checkout_time is set for GAS backend requirement
+      const minCheckout = endTime || '11:00';
+
+      const meetingPayload = {
+        meeting_title: title,
+        meeting_date: date,
+        start_time: startTime,
+        end_time: endTime,
+        minimum_checkout_time: minCheckout,
+        location_name: room,
+        organizer: organizer || 'ฝ่ายจัดการประชุม',
+        department: department || 'ทั่วไป',
+        status: 'OPEN',
+        participants,
+        gps_required: document.getElementById('mGpsRequired').checked,
+        gpsLat: parseFloat(document.getElementById('mGpsLat').value) || 0,
+        gpsLng: parseFloat(document.getElementById('mGpsLng').value) || 0,
+        gpsRadius: parseFloat(document.getElementById('mGpsRadius').value) || 300,
+        agenda: document.getElementById('mAgenda').value.trim()
+      };
+
+      try {
+        const action = id ? 'updateMeeting' : 'createMeeting';
+        const payload = id
+          ? { ...meetingPayload, meeting_id: id, id }
+          : meetingPayload;
+
+        const res = await apiFetch(action, payload, 'POST');
+
+        if (!res || res.success !== true) {
+          throw new Error(
+            res?.message ||
+            res?.error ||
+            (id
+              ? 'ไม่สามารถแก้ไขการประชุมใน Google Sheets ได้'
+              : 'ไม่สามารถสร้างการประชุมใน Google Sheets ได้')
+          );
+        }
+
+        showToast(
+          res.message || (id ? 'แก้ไขการประชุมเรียบร้อย' : 'สร้างการประชุมเรียบร้อย'),
+          'success'
+        );
+
+        closeMeetingModal();
+        await loadMeetings();
+      } catch (err) {
+        showToast('ไม่สามารถบันทึกข้อมูลได้: ' + err.message, 'error');
+      }
+    }
+
+    async function handleDeleteMeeting(id) {
+      const confirmed = await showConfirmAction('ยืนยันการลบการประชุมนี้?', { title: 'ลบการประชุม', okText: 'ลบ', danger: true });
+      if (!confirmed) return;
+      try {
+        const res = await apiFetch('deleteMeeting', { id, meeting_id: id }, 'POST');
+        if (res.success) {
+          showToast('ลบการประชุมเรียบร้อย', 'success');
+          loadMeetings();
+        } else {
+          showToast(res.error || 'เกิดข้อผิดพลาด', 'error');
+        }
+      } catch (err) {
+        showToast('ไม่สามารถลบได้: ' + err.message, 'error');
+      }
+    }
+
+    // =========================================================
+    // ATTENDANCE & SUMMARY MANAGEMENT (STEP 5)
+    // =========================================================
+    let currentAttMeetingId = '';
+    let currentAttendanceList = [];
+
+    async function loadAttendanceView(targetId = null) {
+      populateAttMeetingSelect();
+      const select = document.getElementById('selectAttMeeting');
+      if (targetId) {
+        select.value = targetId;
+      }
+      currentAttMeetingId = select.value || (allMeetings[0]?.meeting_id || allMeetings[0]?.id || '');
+      if (currentAttMeetingId) {
+        select.value = currentAttMeetingId;
+        await loadMeetingAttendanceData(currentAttMeetingId);
+      }
+    }
+
+    function populateAttMeetingSelect() {
+      const select = document.getElementById('selectAttMeeting');
+      if (!select) return;
+      const cur = select.value;
+      select.innerHTML = '';
+      if (allMeetings.length === 0) {
+        select.innerHTML = '<option value="">-- ไม่พบรายการประชุม --</option>';
+        return;
+      }
+      allMeetings.forEach(m => {
+        const id = m.meeting_id || m.id;
+        const title = m.meeting_title || m.title || 'การประชุม';
+        const date = m.meeting_date || m.date || '';
+        const status = (m.status || 'SCHEDULED').toUpperCase();
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `[${status}] ${title} (${formatMeetingDateDisplay(date)})`;
+        select.appendChild(opt);
+      });
+      if (cur && allMeetings.some(m => (m.meeting_id === cur || m.id === cur))) {
+        select.value = cur;
+      }
+    }
+
+    async function onAttMeetingChange() {
+      const select = document.getElementById('selectAttMeeting');
+      currentAttMeetingId = select.value;
+      await loadMeetingAttendanceData(currentAttMeetingId);
+    }
+
+    async function loadMeetingAttendanceData(meetingId) {
+      if (!meetingId) return;
+      const tbody = document.getElementById('attendanceTbody');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">กำลังดึงข้อมูลรายงานการเข้าร่วมจาก Google Sheets...</td></tr>';
+
+      // Update badge
+      const m = allMeetings.find(item => (item.meeting_id === meetingId || item.id === meetingId));
+      const statusBadge = document.getElementById('attMeetingStatusBadge');
+      if (m) {
+        const s = (m.status || 'OPEN').toUpperCase();
+        if (s === 'COMPLETED') {
+          statusBadge.innerHTML = '<span class="badge badge-completed">✓ สรุปผลแล้ว (COMPLETED)</span>';
+        } else if (s === 'IN_PROGRESS') {
+          statusBadge.innerHTML = '<span class="badge badge-progress">⚡ กำลังดำเนินการ</span>';
+        } else {
+          statusBadge.innerHTML = '<span class="badge badge-scheduled">📅 นัดหมายแล้ว</span>';
+        }
+      }
+
+      try {
+        // 1. Fetch Attendance Summary KPI
+        const summary = await apiFetch('getAttendanceSummary', { meeting_id: meetingId });
+        if (summary) {
+          document.getElementById('kpiAttApproved').textContent = summary.total_approved ?? summary.approved ?? '0';
+          document.getElementById('kpiAttCheckedIn').textContent = summary.checked_in ?? '0';
+          document.getElementById('kpiAttCheckedOut').textContent = summary.checked_out ?? '0';
+          document.getElementById('kpiAttOnTime').textContent = summary.on_time ?? '0';
+          document.getElementById('kpiAttLate').textContent = summary.late ?? '0';
+          document.getElementById('kpiAttLateCritical').textContent = summary.late_critical ?? '0';
+          document.getElementById('kpiAttEarlyLeave').textContent = summary.early_leave ?? '0';
+          document.getElementById('kpiAttIncomplete').textContent = summary.incomplete ?? '0';
+          document.getElementById('kpiAttAbsent').textContent = summary.absent ?? '0';
+        }
+
+        // 2. Fetch Attendance Records
+        const attRes = await apiFetch('getMeetingAttendance', { meeting_id: meetingId });
+        currentAttendanceList = Array.isArray(attRes) ? attRes : (attRes?.data || []);
+        filterAttendanceTable();
+      } catch (err) {
+        console.error('Failed to load meeting attendance:', err);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:#f87171;">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+      }
+    }
+
+    function filterAttendanceTable() {
+      const tbody = document.getElementById('attendanceTbody');
+      const search = (document.getElementById('searchAttendance')?.value || '').toLowerCase().trim();
+
+      const filtered = currentAttendanceList.filter(a => {
+        if (!search) return true;
+        const name = (a.fullname || a.participantName || '').toLowerCase();
+        const code = (a.employee_code || '').toLowerCase();
+        return name.includes(search) || code.includes(search);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">ไม่พบข้อมูลการเข้าร่วมประชุม</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(a => {
+        const fullname = a.fullname || a.participantName || '-';
+        const empCode = a.employee_code || '-';
+        const pType = a.participant_type || 'INTERNAL';
+        const inTime = a.check_in_time || '-';
+        const outTime = a.check_out_time || '-';
+
+        // Check-in status badge
+        const cStatus = (a.check_in_status || a.status || (inTime !== '-' ? 'ON_TIME' : 'ABSENT')).toUpperCase();
+        let cBadge = '<span class="status-badge-lg badge-absent">⚪ ไม่เข้าร่วม</span>';
+        if (cStatus === 'ON_TIME') cBadge = '<span class="status-badge-lg badge-ontime">🟢 ตรงเวลา</span>';
+        else if (cStatus === 'LATE') cBadge = '<span class="status-badge-lg badge-late">🟡 มาสาย</span>';
+        else if (cStatus === 'LATE_CRITICAL') cBadge = '<span class="status-badge-lg badge-latecritical">🔴 สายเกินเกณฑ์</span>';
+
+        // Final status badge
+        const fStatus = (a.final_status || (outTime !== '-' ? 'COMPLETED' : (inTime !== '-' ? 'INCOMPLETE' : 'ABSENT'))).toUpperCase();
+        let fBadge = '<span class="status-badge-lg badge-absent">⚪ ABSENT</span>';
+        if (fStatus === 'COMPLETED') fBadge = '<span class="status-badge-lg badge-completed">🟢 COMPLETED</span>';
+        else if (fStatus === 'EARLY_LEAVE') fBadge = '<span class="status-badge-lg badge-earlyleave">⚠️ EARLY_LEAVE</span>';
+        else if (fStatus === 'INCOMPLETE') fBadge = '<span class="status-badge-lg badge-incomplete">⚠️ INCOMPLETE</span>';
+
+        // Face & GPS info
+        const faceConf = a.face_confidence ? `${Math.round(a.face_confidence * 100)}%` : (a.face_verified ? '100%' : '-');
+        const gpsInfo = a.check_in_gps_distance ? `${a.check_in_gps_distance} ม.` : (a.distance ? `${a.distance} ม.` : (a.latitude ? 'พิกัดสมบูรณ์' : '-'));
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(fullname)}</strong></td>
+            <td><code style="color:#cbd5e1;">${escapeHtml(empCode)}</code></td>
+            <td><span class="badge badge-type">${escapeHtml(pType)}</span></td>
+            <td><strong>${inTime}</strong></td>
+            <td><strong>${outTime}</strong></td>
+            <td>${cBadge}</td>
+            <td>${fBadge}</td>
+            <td>${a.face_verified ? `<span style="color:#34d399; font-weight:700;">✅ (${faceConf})</span>` : '-'}</td>
+            <td><span style="font-size:0.8rem; color:#cbd5e1;">${escapeHtml(gpsInfo)}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Finalize Meeting Handler
+    async function handleFinalizeMeeting() {
+      if (!currentAttMeetingId) {
+        showToast('กรุณาเลือกการประชุมที่ต้องการสรุปผล', 'warning');
+        return;
+      }
+
+      const confirmMsg = "เมื่อสรุปผล ระบบจะบันทึกผู้ที่ได้รับอนุมัติ แต่ไม่มี Check-in เป็น ABSENT และผู้ที่ไม่มี Check-out เป็น INCOMPLETE ต้องการดำเนินการต่อหรือไม่?";
+      const confirmed = await showConfirmAction(confirmMsg, { title: 'สรุปผลการประชุม', okText: 'สรุปผล' });
+      if (!confirmed) return;
+
+      const btn = document.getElementById('btnFinalizeMeeting');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ กำลังสรุปผล...</span>';
+
+      try {
+        const res = await apiFetch('finalizeMeetingAttendance', {
+          meeting_id: currentAttMeetingId
+        }, 'POST');
+
+        if (res.success) {
+          showToast(res.message || 'สรุปผลการประชุมและบันทึก ABSENT/INCOMPLETE เรียบร้อย', 'success');
+          // Reload meetings and attendance
+          await loadMeetings();
+          await loadMeetingAttendanceData(currentAttMeetingId);
+        } else {
+          showToast(res.message || 'ไม่สามารถสรุปผลการประชุมได้', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🔒 สรุปผลการประชุม (Finalize)</span>';
+      }
+    }
+
+    // Initialize
+    loadMeetings();
+  </script>
+</body>
+</html>

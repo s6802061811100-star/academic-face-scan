@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แดชบอร์ดสถิติ &amp; รายงานผู้บริหาร (Dashboard - v7)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #ec4899;
+      --primary-hover: #db2777;
+      --blue: #3b82f6;
+      --indigo: #6366f1;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 80% 10%, #2b1022 0%, #0b0f19 70%, #050811 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 60px;
+    }
+
+    /* Navbar */
+    .navbar {
+      width: 100%;
+      max-width: 1200px;
+      padding: 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-icon {
+      font-size: 24px;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+    }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-btn {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Page Title & Export Actions */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .dh-title h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .dh-title p { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+
+    .export-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-export {
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-export:hover { transform: translateY(-1px); }
+
+    /* KPI Metrics Cards (4 columns) */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(12px);
+      transition: all 0.2s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .kpi-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .kpi-info .val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .kpi-info .lbl {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Charts & Visual Analytics Section */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+    }
+
+    .chart-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(12px);
+    }
+    .cp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 10px;
+    }
+    .cp-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+
+    /* Department Bars */
+    .dept-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .dept-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .dept-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+    .dept-bar-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .dept-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      transition: width 0.6s ease;
+    }
+
+    /* Donut Chart Simulation */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 10px 0;
+    }
+    .donut-svg {
+      width: 140px;
+      height: 140px;
+      transform: rotate(-90deg);
+    }
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+    .leg-item { display: flex; align-items: center; gap: 8px; }
+    .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* Activity Feeds Split */
+    .feeds-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+    .feed-item {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .feed-left { display: flex; flex-direction: column; gap: 2px; }
+    .feed-name { font-size: 0.92rem; font-weight: 600; color: #fff; }
+    .feed-sub { font-size: 0.78rem; color: var(--muted); }
+
+    .badge-ontime { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+    .badge-late   { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+
+    @media (max-width: 850px) {
+      .analytics-grid, .feeds-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <div style="font-weight:700; font-size:1.1rem;">แดชบอร์ดสถิติ &amp; รายงาน</div>
+        <div style="font-size:0.75rem; color:#94a3b8;">Analytics &amp; Attendance Dashboard (v7)</div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="admin.html" class="nav-btn" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #c7d2fe;">⚙️ เมนูผู้ดูแลระบบ</a>
+      <a href="meetings.html" class="nav-btn">📅 จัดการประชุม</a>
+      <a href="smart-room.html" class="nav-btn">🎙️ ห้องประชุม AI</a>
+      <a href="config.html" class="nav-btn">🔧 ตั้งค่าระบบ</a>
+      <a href="index.html" class="nav-btn">🏠 หน้าหลักผู้ใช้</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div class="dh-title">
+        <h1>ภาพรวมสถิติการเข้างานและการประชุม</h1>
+        <p>รายงานข้อมูลแบบเรียลไทม์ วิเคราะห์ความตรงเวลา และประวัติการสแกน</p>
+      </div>
+      <div class="export-buttons">
+        <button class="btn-export" onclick="exportCsv()">📥 ดาวน์โหลด CSV</button>
+        <button class="btn-export" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="window.print()">🖨️ พิมพ์รายงาน</button>
+      </div>
+    </div>
+
+    <!-- 4 KPI Metric Cards -->
+    <div class="kpi-grid">
+      <!-- Total Employees -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg, #3b82f6, #1d4ed8);">👥</div>
+        <div class="kpi-info">
+          <div class="val" id="kpiEmployees">-</div>
+          <div class="lbl">พนักงานในระบบ (คน)</div>
+        </div>
+      </div>
+
+      <!-- Punctuality Rate -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg, #10b981, #059669);">⏱️</div>
+        <div class="kpi-info">
+          <div class="val" id="kpiPunctuality">- %</div>
+          <div class="lbl">อัตราตรงเวลา (เข้างานทั่วไป)</div>
+        </div>
+      </div>
+
+      <!-- Meetings Count -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed);">📅</div>
+        <div class="kpi-info">
+          <div class="val" id="kpiMeetings">-</div>
+          <div class="lbl">รายการประชุมทั้งหมด</div>
+        </div>
+      </div>
+
+      <!-- Meeting Check-ins -->
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:linear-gradient(135deg, #ec4899, #be185d);">✅</div>
+        <div class="kpi-info">
+          <div class="val" id="kpiMeetingAtt">-</div>
+          <div class="lbl">จำนวนเช็คชื่อเข้าประชุม</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="analytics-grid">
+      <!-- Punctuality Breakdown Donut -->
+      <div class="chart-panel">
+        <div class="cp-header">
+          <h2 class="cp-title">🎯 สัดส่วนความตรงเวลา (On-Time vs Late)</h2>
+          <span style="font-size:0.8rem; color:var(--muted);" id="attTotalSpan">รวม 0 รายการ</span>
+        </div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" viewBox="0 0 36 36">
+            <path stroke="rgba(255,255,255,0.08)" stroke-width="3.8" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            <path id="donutOnTime" stroke="#10b981" stroke-width="3.8" stroke-dasharray="85, 100" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
+          <div class="donut-legend">
+            <div class="leg-item">
+              <span class="leg-dot" style="background:#10b981;"></span>
+              <span>ตรงเวลา (On-Time): <strong id="valOnTime">0</strong> รายการ</span>
+            </div>
+            <div class="leg-item">
+              <span class="leg-dot" style="background:#f59e0b;"></span>
+              <span>มาสาย (Late): <strong id="valLate">0</strong> รายการ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Distribution -->
+      <div class="chart-panel">
+        <div class="cp-header">
+          <h2 class="cp-title">🏢 พนักงานตามแผนก (Departments)</h2>
+        </div>
+        <div class="dept-list" id="deptContainer">
+          <p style="color:var(--muted); text-align:center; padding:20px 0;">กำลังโหลดสถิติแผนก...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feeds Split: General Attendance vs Meeting Attendance -->
+    <div class="feeds-grid">
+      <!-- General Attendance Logs -->
+      <div class="chart-panel">
+        <div class="cp-header">
+          <h2 class="cp-title">👤 ประวัติสแกนเข้างานทั่วไป (v1 Logs)</h2>
+          <a href="scan.html" class="nav-btn" style="padding:4px 10px; font-size:0.75rem;">เปิดสแกน</a>
+        </div>
+        <div class="feed-list" id="generalLogsList">
+          <p style="color:var(--muted); text-align:center; padding:20px 0;">ไม่มีประวัติการสแกน</p>
+        </div>
+      </div>
+
+      <!-- Meeting Attendance Logs -->
+      <div class="chart-panel">
+        <div class="cp-header">
+          <h2 class="cp-title">📷 ประวัติเช็คชื่อเข้าห้องประชุม (v3 Logs)</h2>
+          <a href="meeting-scan.html" class="nav-btn" style="padding:4px 10px; font-size:0.75rem;">สแกนประชุม</a>
+        </div>
+        <div class="feed-list" id="meetingLogsList">
+          <p style="color:var(--muted); text-align:center; padding:20px 0;">ไม่มีประวัติการเช็คชื่อ</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let dashboardData = null;
+
+    async function loadDashboard() {
+      try {
+        const data = await apiFetch('getDashboardStats');
+        if (data) {
+          dashboardData = data;
+          renderDashboard(data);
+        }
+      } catch (err) {
+        showToast('ไม่สามารถโหลดข้อมูลสถิติได้', 'error');
+      }
+    }
+
+    function renderDashboard(data) {
+      // 1. KPI Cards
+      document.getElementById('kpiEmployees').textContent = data.totalEmployees || 0;
+      document.getElementById('kpiPunctuality').textContent = (data.workOnTimeRate || 100) + '%';
+      document.getElementById('kpiMeetings').textContent = data.totalMeetings || 0;
+      document.getElementById('kpiMeetingAtt').textContent = data.totalMeetingAttendance || 0;
+
+      // 2. Donut chart
+      const totalAtt = (data.onTimeWork || 0) + (data.lateWork || 0);
+      document.getElementById('attTotalSpan').textContent = `รวม ${totalAtt} ครั้ง`;
+      document.getElementById('valOnTime').textContent = data.onTimeWork || 0;
+      document.getElementById('valLate').textContent = data.lateWork || 0;
+
+      const rate = totalAtt > 0 ? Math.round(((data.onTimeWork || 0) / totalAtt) * 100) : 100;
+      document.getElementById('donutOnTime').setAttribute('stroke-dasharray', `${rate}, 100`);
+
+      // 3. Departments
+      const deptContainer = document.getElementById('deptContainer');
+      const depts = data.departmentStats || {};
+      const keys = Object.keys(depts);
+      if (keys.length === 0) {
+        deptContainer.innerHTML = '<p style="color:var(--muted); text-align:center;">ไม่พบข้อมูลแผนก</p>';
+      } else {
+        const max = Math.max(...Object.values(depts), 1);
+        deptContainer.innerHTML = keys.map(k => {
+          const count = depts[k];
+          const pct = Math.round((count / max) * 100);
+          return `
+            <div class="dept-row">
+              <div class="dept-meta">
+                <span style="font-weight:600; color:#fff;">${escapeHtml(k)}</span>
+                <span style="color:var(--muted);">${count} คน</span>
+              </div>
+              <div class="dept-bar-track">
+                <div class="dept-bar-fill" style="width:${pct}%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 4. General Attendance Feed
+      const genLogsList = document.getElementById('generalLogsList');
+      const logs = data.recentLogs || [];
+      if (logs.length === 0) {
+        genLogsList.innerHTML = '<p style="color:var(--muted); text-align:center; padding:20px 0;">ไม่มีรายการสแกน</p>';
+      } else {
+        genLogsList.innerHTML = logs.map(l => `
+          <div class="feed-item">
+            <div class="feed-left">
+              <div class="feed-name">${escapeHtml(l.name)}</div>
+              <div class="feed-sub">📅 ${l.date} ${l.time} ${l.distance ? `• ระยะห่าง ${l.distance} ม.` : ''}</div>
+            </div>
+            <div>
+              <span class="${l.status === 'late' ? 'badge-late' : 'badge-ontime'}">
+                ${l.status === 'late' ? '⚠️ มาสาย' : '✓ ตรงเวลา'}
+              </span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 5. Meeting Attendance Feed
+      const meetLogsList = document.getElementById('meetingLogsList');
+      const mLogs = data.recentMeetingAttendance || [];
+      if (mLogs.length === 0) {
+        meetLogsList.innerHTML = '<p style="color:var(--muted); text-align:center; padding:20px 0;">ไม่มีรายการเช็คชื่อเข้าประชุม</p>';
+      } else {
+        meetLogsList.innerHTML = mLogs.map(l => `
+          <div class="feed-item">
+            <div class="feed-left">
+              <div class="feed-name">${escapeHtml(l.participantName)}</div>
+              <div class="feed-sub">เช็คชื่อเวลา ${l.checkInTime} น. ${l.distance ? `• ${l.distance} ม.` : ''}</div>
+            </div>
+            <div>
+              <span class="${l.status === 'late' ? 'badge-late' : 'badge-ontime'}">
+                ${l.status === 'late' ? '⚠️ เข้าร่วมสาย' : '✓ ตรงเวลา'}
+              </span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function exportCsv() {
+      if (!dashboardData || !dashboardData.recentLogs) {
+        return showToast('ไม่มีข้อมูลสำหรับส่งออก', 'warning');
+      }
+
+      const rows = [
+        ['Type', 'Name', 'Date', 'Time', 'Status', 'Distance (m)']
+      ];
+
+      (dashboardData.recentLogs || []).forEach(l => {
+        rows.push(['Work Attendance', l.name, l.date, l.time, l.status, l.distance || 0]);
+      });
+
+      (dashboardData.recentMeetingAttendance || []).forEach(m => {
+        rows.push(['Meeting Attendance', m.participantName, m.checkInDate || '-', m.checkInTime, m.status, m.distance || 0]);
+      });
+
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(e => e.join(',')).join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('ดาวน์โหลดรายงาน CSV เรียบร้อย', 'success');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>

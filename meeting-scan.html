@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบันทึกเวลาเข้าประชุม (Check-in Wizard)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <!-- Face API Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-main: #f8fafc;
+      --card-bg: #ffffff;
+      --card-hover: #f1f5f9;
+      --card-border: #e2e8f0;
+      --primary: #4338ca;
+      --primary-hover: #3730a3;
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --error: #dc2626;
+      --error-light: #fef2f2;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    body {
+      font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px 48px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wizard-container {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 76px);
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 9999px;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      color: var(--text-main);
+      background: var(--card-hover);
+      border-color: #cbd5e1;
+    }
+
+    .mode-pill {
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      box-shadow: var(--shadow-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .mode-pill.checkin {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1.5px solid #a7f3d0;
+    }
+    .mode-pill.checkout {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1.5px solid #fde68a;
+    }
+
+    /* Progress Indicator */
+    .progress-section {
+      margin-bottom: 24px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 20%;
+      background: linear-gradient(90deg, #4338ca, #6366f1);
+      border-radius: 9999px;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Wizard Step Box */
+    .wizard-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+    }
+
+    .wizard-step {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      width: 100%;
+    }
+
+    .step-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .step-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: inline-block;
+      line-height: 1;
+    }
+
+    .step-title {
+      font-size: 1.875rem; /* ~30px */
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    .step-subtitle {
+      font-size: 1.0625rem; /* ~17px */
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Step 1: Meeting Selection List */
+    .meeting-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 32px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .meeting-item-card {
+      background: #ffffff;
+      border: 1.5px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px 22px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .meeting-item-card:hover {
+      background: var(--card-hover);
+      border-color: #cbd5e1;
+    }
+
+    .meeting-item-card.selected {
+      background: #f5f3ff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2.5px rgba(67, 56, 202, 0.25);
+    }
+
+    .meeting-item-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .meeting-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .meeting-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Step 2: 2-Column Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+      width: 100%;
+    }
+
+    .info-card {
+      background: #f8fafc;
+      border: 1.5px solid var(--card-border);
+      border-radius: 18px;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .info-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-val {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    /* Step 3: Identity Verification & Camera */
+    .system-status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+      width: 100%;
+    }
+
+    .status-mini-card {
+      background: #f8fafc;
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+      min-height: 72px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-mini-label {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .status-mini-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    .status-mini-val.ready { color: var(--success); }
+    .status-mini-val.loading { color: var(--primary); }
+    .status-mini-val.warn { color: var(--warning); }
+    .status-mini-val.error { color: var(--error); }
+
+    .camera-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      max-height: 480px;
+      background: #0f172a;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 22px;
+      border: 1.5px solid var(--card-border);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1);
+    }
+
+    #overlayCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      transform: scaleX(-1);
+    }
+
+    /* Face detection guide: always visible while camera is active */
+    .face-scan-guide {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(48%, 300px);
+      aspect-ratio: 0.82 / 1;
+      transform: translate(-50%, -50%);
+      border-radius: 26px;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0.72;
+    }
+
+    .face-scan-guide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 26px;
+      background:
+        linear-gradient(#ffffff, #ffffff) left top / 34px 3px no-repeat,
+        linear-gradient(#ffffff, #ffffff) left top / 3px 34px no-repeat,
+        linear-gradient(#ffffff, #ffffff) right top / 34px 3px no-repeat,
+        linear-gradient(#ffffff, #ffffff) right top / 3px 34px no-repeat,
+        linear-gradient(#ffffff, #ffffff) left bottom / 34px 3px no-repeat,
+        linear-gradient(#ffffff, #ffffff) left bottom / 3px 34px no-repeat,
+        linear-gradient(#ffffff, #ffffff) right bottom / 34px 3px no-repeat,
+        linear-gradient(#ffffff, #ffffff) right bottom / 3px 34px no-repeat;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+    }
+
+    .face-guide-text {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 3;
+      color: #ffffff;
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(6px);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+
+    /* Camera Status Overlay (shown when camera fails) */
+    .camera-overlay-message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffffff;
+      padding: 24px;
+      text-align: center;
+      z-index: 5;
+    }
+
+    .camera-overlay-icon {
+      font-size: 52px;
+      margin-bottom: 14px;
+    }
+
+    .camera-overlay-text {
+      font-size: 1.1rem;
+      color: #f8fafc;
+      margin-bottom: 20px;
+      line-height: 1.5;
+      max-width: 480px;
+    }
+
+    .btn-cam-retry {
+      padding: 12px 26px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(67, 56, 202, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-cam-retry:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Real-time Recognition Status Panel */
+    .face-status-pill {
+      width: 100%;
+      background: #f8fafc;
+      border: 1.5px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px 22px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .face-status-title {
+      font-size: 1.35rem; /* ~22px */
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 4px;
+      line-height: 1.35;
+    }
+
+    .face-status-sub {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Successful Identification Info Card */
+    .face-matched-info {
+      width: 100%;
+      background: #ecfdf5;
+      border: 1.5px solid #a7f3d0;
+      border-radius: 18px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.08);
+    }
+
+    .face-matched-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #065f46;
+      margin-bottom: 4px;
+    }
+
+    .face-matched-code {
+      font-size: 1.05rem;
+      color: #047857;
+      font-weight: 700;
+    }
+
+    /* Face Database Warning & Retry Box */
+    .face-db-warn-box {
+      width: 100%;
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-radius: 18px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .face-db-warn-text {
+      font-size: 1.05rem;
+      color: #92400e;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .btn-db-retry {
+      width: 100%;
+      max-width: 360px;
+      min-height: 52px;
+      background: #d97706;
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-db-retry:hover {
+      background: #b45309;
+    }
+
+    /* Step 4: GPS Verification */
+    .gps-box {
+      text-align: center;
+      padding: 36px 24px;
+      background: #f8fafc;
+      border-radius: 20px;
+      border: 1.5px solid var(--card-border);
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .gps-icon {
+      font-size: 52px;
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+
+    .gps-status-main {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    .gps-status-sub {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .attendance-action-status {
+      display: none;
+      margin: -12px 0 22px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      text-align: center;
+      font-weight: 700;
+      line-height: 1.55;
+      border: 1px solid transparent;
+    }
+
+    .attendance-action-status.info {
+      display: block;
+      color: #1d4ed8;
+      background: #eff6ff;
+      border-color: #93c5fd;
+    }
+
+    .attendance-action-status.success {
+      display: block;
+      color: #047857;
+      background: #ecfdf5;
+      border-color: #6ee7b7;
+    }
+
+    .attendance-action-status.warning {
+      display: block;
+      color: #92400e;
+      background: #fffbeb;
+      border-color: #fcd34d;
+    }
+
+    .attendance-action-status.error {
+      display: block;
+      color: #b91c1c;
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+
+    /* Step 5: Final Success Screen */
+    .success-screen {
+      text-align: center;
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .success-icon-wrap {
+      width: 84px;
+      height: 84px;
+      background: #ecfdf5;
+      border: 2.5px solid #34d399;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      margin-bottom: 16px;
+      color: #059669;
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.15);
+    }
+
+    .success-title {
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 14px;
+    }
+
+    .attendance-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border-radius: 9999px;
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .badge-ontime { background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; }
+    .badge-late { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; }
+    .badge-latecritical { background: #fef2f2; color: #991b1b; border: 1.5px solid #fecaca; }
+    .badge-completed { background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; }
+    .badge-earlyleave { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; }
+
+    .success-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .summary-card {
+      background: #f8fafc;
+      border: 1.5px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-card-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .summary-card-val {
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .summary-card-val.success-text {
+      color: var(--success);
+    }
+
+    /* Action Buttons Stack (Below Content, Full Width) */
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: auto;
+      width: 100%;
+    }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 56px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 1.125rem; /* ~18px */
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(67, 56, 202, 0.3);
+      text-decoration: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(67, 56, 202, 0.35);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      min-height: 52px;
+      background: #ffffff;
+      color: var(--text-muted);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 1.0625rem; /* ~17px */
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-hover);
+      color: var(--text-main);
+      border-color: #cbd5e1;
+    }
+
+    .loader {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #ffffff;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body {
+        padding: 18px 14px 40px;
+      }
+
+      .wizard-container {
+        width: 100%;
+        min-height: calc(100vh - 58px);
+      }
+
+      .wizard-card {
+        padding: 26px 20px;
+        border-radius: 20px;
+      }
+
+      .step-title {
+        font-size: 1.65rem;
+      }
+
+      .step-subtitle {
+        font-size: 1rem;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .success-summary-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .system-status-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .status-mini-card {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 12px 18px;
+        min-height: 52px;
+      }
+
+      .camera-container {
+        border-radius: 16px;
+        margin-bottom: 18px;
+      }
+
+      .face-status-pill {
+        padding: 16px 18px;
+      }
+
+      .face-status-title {
+        font-size: 1.2rem;
+      }
+
+      .face-matched-title {
+        font-size: 1.3rem;
+      }
+
+      .gps-box {
+        padding: 28px 18px;
+      }
+
+      .btn-primary {
+        min-height: 54px;
+        font-size: 1.08rem;
+      }
+
+      .btn-secondary {
+        min-height: 50px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wizard-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-bar">
+      <a href="index.html" class="nav-btn" id="btnExitWizard" onclick="handleExitWizard(event)">
+        <span>✕</span>
+        <span>ยกเลิก</span>
+      </a>
+      <div id="modePill" class="mode-pill checkin">📍 เช็กอินเข้าประชุม</div>
+    </header>
+
+    <!-- Progress Indicator -->
+    <div class="progress-section">
+      <div class="progress-label">
+        <span id="stepProgressText">ขั้นตอน 1 จาก 5: เลือกการประชุม</span>
+        <span id="stepPercentText">20%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressBar" style="width: 20%;"></div>
+      </div>
+    </div>
+
+    <!-- Main Wizard Content Box -->
+    <main class="wizard-card">
+
+      <!-- ========================================== -->
+      <!-- STEP 1: เลือกการประชุม -->
+      <!-- ========================================== -->
+      <section id="step1" class="wizard-step">
+        <div class="step-header">
+          <div class="step-icon">📅</div>
+          <h1 class="step-title">เลือกการประชุม</h1>
+          <p class="step-subtitle">กรุณาเลือกรายการประชุมที่คุณต้องการเข้าร่วม</p>
+        </div>
+
+        <div id="meetingListContainer" class="meeting-list">
+          <div style="text-align: center; padding: 40px 10px; color: var(--text-muted); font-size: 1.05rem;">
+            กำลังโหลดรายการประชุม...
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="button" class="btn-primary" id="btnStep1Next" disabled onclick="goToStep(2)">
+            <span>ถัดไป</span>
+            <span>➜</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STEP 2: ยืนยันการเช็กอิน / เช็กเอาต์ (Info Grid) -->
+      <!-- ========================================== -->
+      <section id="step2" class="wizard-step" style="display: none;">
+        <div class="step-header">
+          <div class="step-icon" id="step2Icon">📍</div>
+          <h1 class="step-title" id="step2Title">ยืนยันการเช็กอิน</h1>
+          <p class="step-subtitle">ตรวจสอบข้อมูลการประชุมก่อนเริ่มสแกนใบหน้า</p>
+        </div>
+
+        <div class="info-grid" id="step2Summary">
+          <div class="info-card">
+            <div class="info-label">📋 ชื่อการประชุม</div>
+            <div class="info-val" id="summaryMtgTitle">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">📅 วันที่</div>
+            <div class="info-val" id="summaryMtgDate">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">⏱️ เวลา</div>
+            <div class="info-val" id="summaryMtgTime">-</div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">📍 สถานที่</div>
+            <div class="info-val" id="summaryMtgLocation">-</div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="button" class="btn-primary" id="btnStartFaceScan" onclick="startFaceScanStep()">
+            <span>📷</span>
+            <span>เริ่มสแกนใบหน้า</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="goToStep(1)">
+            <span>ย้อนกลับ</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STEP 3: ยืนยันตัวตน (สแกนใบหน้า) -->
+      <!-- ========================================== -->
+      <section id="step3" class="wizard-step" style="display: none;">
+        <div class="step-header">
+          <div class="step-icon">👤</div>
+          <h1 class="step-title">ยืนยันตัวตน</h1>
+          <p class="step-subtitle">กรุณามองตรงที่กล้องเพื่อตรวจจับใบหน้า</p>
+        </div>
+
+        <!-- 1. System Status Badges Grid -->
+        <div class="system-status-grid">
+          <div class="status-mini-card">
+            <div class="status-mini-label">📷 กล้อง</div>
+            <div class="status-mini-val" id="badgeCamera">กำลังเปิด...</div>
+          </div>
+          <div class="status-mini-card">
+            <div class="status-mini-label">🧠 AI Model</div>
+            <div class="status-mini-val" id="badgeModel">กำลังโหลด...</div>
+          </div>
+          <div class="status-mini-card">
+            <div class="status-mini-label">👤 ฐานข้อมูลใบหน้า</div>
+            <div class="status-mini-val" id="badgeFaceDb">กำลังดึง...</div>
+          </div>
+        </div>
+
+        <!-- 2. Large Camera Preview -->
+        <div class="camera-container" id="cameraBox">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="overlayCanvas"></canvas>
+          <div class="face-scan-guide" id="faceScanGuide" aria-hidden="true"></div>
+          <div class="face-guide-text" id="faceGuideText">วางใบหน้าให้อยู่บริเวณกึ่งกลางกล้อง</div>
+          
+          <!-- Camera Error Overlay Message -->
+          <div id="camOverlay" class="camera-overlay-message">
+            <div class="camera-overlay-icon" id="camOverlayIcon">📷</div>
+            <div class="camera-overlay-text" id="camOverlayText">ไม่สามารถเปิดกล้องได้</div>
+            <button type="button" class="btn-cam-retry" onclick="startCamera()">
+              <span>🔄</span>
+              <span>ลองเปิดกล้องอีกครั้ง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Real-time Recognition Status Panel -->
+        <div class="face-status-pill" id="faceStatusPill">
+          <div class="face-status-title" id="faceStatusTitle">กำลังเตรียมระบบ AI...</div>
+          <div class="face-status-sub" id="faceStatusSub">กรุณารอสักครู่</div>
+        </div>
+
+        <!-- 4. Successful Identification Info (Hidden until match) -->
+        <div class="face-matched-info" id="faceMatchedInfo" style="display: none;">
+          <div class="face-matched-title" id="matchedFullName">สมชาย ใจดี</div>
+          <div class="face-matched-code" id="matchedEmpCode">รหัส: EMP001</div>
+        </div>
+
+        <!-- 5. Face DB Error Alert & Retry Box (Shown when face DB is empty/fails) -->
+        <div id="faceDbWarnBox" class="face-db-warn-box" style="display: none;">
+          <div class="face-db-warn-text" id="faceDbWarnText">⚠️ ไม่พบฐานข้อมูลใบหน้าที่ลงทะเบียน กรุณาลงทะเบียนใบหน้าก่อน หรือกดโหลดข้อมูลอีกครั้ง</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 360px;">
+            <a href="register.html" class="btn-db-retry" style="text-decoration: none; background: #4f46e5; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+              <span>👤</span>
+              <span>ลงทะเบียนใบหน้าใหม่</span>
+            </a>
+            <button type="button" class="btn-db-retry" onclick="retryLoadFaceDatabase()">
+              <span>🔄</span>
+              <span>โหลดฐานใบหน้าอีกครั้ง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 6. Bottom Action Buttons Stack -->
+        <div class="button-group">
+          <button type="button" class="btn-primary" id="btnStep3Next" disabled onclick="goToGpsStep()">
+            <span>ดำเนินการต่อ</span>
+            <span>➜</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="cancelCameraAndGoBack(2)">
+            <span>ย้อนกลับ</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STEP 4: ตรวจสอบตำแหน่ง GPS -->
+      <!-- ========================================== -->
+      <section id="step4" class="wizard-step" style="display: none;">
+        <div class="step-header">
+          <div class="step-icon">📡</div>
+          <h1 class="step-title">ตรวจสอบตำแหน่ง</h1>
+          <p class="step-subtitle">ตรวจสอบพิกัด GPS ณ สถานที่จัดประชุม</p>
+        </div>
+
+        <div class="gps-box" id="gpsStatusBox">
+          <div class="gps-icon" id="gpsIcon">⏳</div>
+          <div class="gps-status-main" id="gpsStatusMain">กำลังตรวจสอบ GPS...</div>
+          <div class="gps-status-sub" id="gpsStatusSub">กรุณาอนุญาตให้เข้าถึงตำแหน่งที่ตั้ง</div>
+        </div>
+
+        <div id="attendanceActionStatus" class="attendance-action-status"></div>
+
+        <div class="button-group">
+          <button type="button" class="btn-primary" id="btnConfirmAttendance" disabled onclick="executeAttendanceAction()">
+            <span id="btnConfirmText">ยืนยันเช็กอิน</span>
+            <span id="btnConfirmSpinner" class="loader" style="display: none;"></span>
+          </button>
+          <button type="button" class="btn-secondary" id="btnGpsRetry" style="display: none;" onclick="checkGpsLocation()">
+            <span>🔄 ตรวจสอบ GPS อีกครั้ง</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="goToStep(3)">
+            <span>ย้อนกลับ</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- STEP 5: สำเร็จ (Success Receipt) -->
+      <!-- ========================================== -->
+      <section id="step5" class="wizard-step" style="display: none;">
+        <div class="success-screen">
+          <div class="success-icon-wrap">✓</div>
+          <h1 class="success-title" id="successTitle">เช็กอินสำเร็จ</h1>
+
+          <div id="attendanceStatusBadge" class="attendance-status-badge badge-ontime">
+            🟢 ตรงเวลา
+          </div>
+
+          <div class="success-summary-grid">
+            <div class="summary-card">
+              <div class="summary-card-label">👤 ชื่อผู้เข้าร่วม</div>
+              <div class="summary-card-val" id="successName">-</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">📋 กิจกรรม</div>
+              <div class="summary-card-val" id="successMeeting">-</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label" id="successTimeLabel">⏱️ เวลาเข้า</div>
+              <div class="summary-card-val" id="successTime">-</div>
+            </div>
+            <div class="summary-card" id="successCheckoutRow" style="display: none;">
+              <div class="summary-card-label">⏱️ เวลาออก</div>
+              <div class="summary-card-val" id="successCheckoutTime">-</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">👤 Face Recognition</div>
+              <div class="summary-card-val success-text">✅ ยืนยันแล้ว</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-label">📡 GPS Location</div>
+              <div class="summary-card-val success-text">✅ ยืนยันแล้ว</div>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <a href="index.html" class="btn-primary">
+              <span>🏠</span>
+              <span>กลับหน้าหลัก</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Configuration & State
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    const MATCH_THRESHOLD = 0.45;
+
+    let currentStep = 1;
+    let attendanceMode = 'CHECK_IN'; // CHECK_IN or CHECK_OUT
+    let selectedMeeting = null;
+    let allMeetings = [];
+    
+    // Face Recognition State
+    let knownFaces = [];
+    let labeledDescriptors = [];
+    let faceMatcher = null;
+    let groupedByLabel = {};
+    let modelsLoaded = false;
+    let knownFacesLoaded = false;
+    let cameraReady = false;
+    let scanInterval = null;
+    let recognizedEmployee = null;
+    let isVerifyingEligibility = false;
+    window.currentCameraStream = null;
+
+    // GPS State
+    let userLat = null, userLng = null;
+    let isGpsValid = false;
+    let calculatedDistanceMeters = null;
+
+    // API fetch helper
+    async function apiFetch(action, params = {}, method = 'GET', bodyData = null, timeoutMs = 22000) {
+      const url = new URL('/api', window.location.origin);
+      url.searchParams.set('action', action);
+      Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      const options = {
+        method,
+        signal: controller.signal
+      };
+
+      if (bodyData) {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify({ action, ...bodyData });
+      }
+
+      try {
+        const res = await fetch(url.toString(), options);
+
+        let data = {};
+        try { data = await res.json(); } catch {}
+
+        if (!res.ok) {
+          throw new Error(
+            data?.message ||
+            data?.error ||
+            `Server ตอบกลับ HTTP ${res.status}`
+          );
+        }
+
+        return data;
+      } catch (err) {
+        if (err?.name === 'AbortError') {
+          throw new Error(`ระบบใช้เวลาตอบกลับนานเกิน ${Math.round(timeoutMs / 1000)} วินาที กรุณาลองใหม่`);
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    // Init page
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = (params.get('mode') || 'CHECK_IN').toUpperCase();
+      attendanceMode = modeParam === 'CHECK_OUT' ? 'CHECK_OUT' : 'CHECK_IN';
+
+      updateModeUI();
+      await loadMeetings();
+
+      // Pre-load AI models & face DB in background
+      loadAIModels();
+      loadKnownFaces();
+    }
+
+    function handleExitWizard(e) {
+      stopCamera();
+    }
+
+    function updateModeUI() {
+      const pill = document.getElementById('modePill');
+      const step2Icon = document.getElementById('step2Icon');
+      const step2Title = document.getElementById('step2Title');
+      const btnConfirmText = document.getElementById('btnConfirmText');
+      const successTitle = document.getElementById('successTitle');
+
+      if (attendanceMode === 'CHECK_OUT') {
+        pill.className = 'mode-pill checkout';
+        pill.textContent = '⏱️ เช็กเอาต์ออกจากประชุม';
+        step2Icon.textContent = '⏱️';
+        step2Title.textContent = 'ยืนยันการเช็กเอาต์';
+        btnConfirmText.textContent = 'ยืนยันเช็กเอาต์';
+        successTitle.textContent = 'เช็กเอาต์สำเร็จ';
+      } else {
+        pill.className = 'mode-pill checkin';
+        pill.textContent = '📍 เช็กอินเข้าประชุม';
+        step2Icon.textContent = '📍';
+        step2Title.textContent = 'ยืนยันการเช็กอิน';
+        btnConfirmText.textContent = 'ยืนยันเช็กอิน';
+        successTitle.textContent = 'เช็กอินสำเร็จ';
+      }
+    }
+
+    // Formatting Helpers
+    function formatThaiDate(dStr) {
+      if (!dStr) return '-';
+      try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return dStr;
+        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+      } catch (e) {
+        return dStr;
+      }
+    }
+
+    function formatTime(tStr) {
+      if (!tStr) return '-';
+      try {
+        if (typeof tStr === 'string' && tStr.includes('T')) {
+          const d = new Date(tStr);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+        return tStr;
+      } catch (e) {
+        return tStr;
+      }
+    }
+
+    // Wizard Step Navigation
+    function goToStep(step) {
+      currentStep = step;
+      document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
+      const target = document.getElementById('step' + step);
+      if (target) target.style.display = 'flex';
+
+      const titles = [
+        'เลือกการประชุม',
+        attendanceMode === 'CHECK_OUT' ? 'ยืนยันการเช็กเอาต์' : 'ยืนยันการเช็กอิน',
+        'ยืนยันตัวตน',
+        'ตรวจสอบตำแหน่ง',
+        'สำเร็จ'
+      ];
+
+      const pct = (step / 5) * 100;
+      document.getElementById('stepProgressText').textContent = `ขั้นตอน ${step} จาก 5: ${titles[step - 1]}`;
+      document.getElementById('stepPercentText').textContent = `${Math.round(pct)}%`;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+
+      if (step === 2) {
+        renderStep2Summary();
+      } else if (step === 3) {
+        // Explicitly trigger camera when entering step 3
+        console.log("Entering Step 3");
+        startCamera();
+        if (!modelsLoaded) loadAIModels();
+        if (!knownFacesLoaded) loadKnownFaces();
+      }
+    }
+
+    // Step 1: Load Meetings
+    async function loadMeetings() {
+      const container = document.getElementById('meetingListContainer');
+      try {
+        const res = await apiFetch('getMeetings');
+        const list = Array.isArray(res) ? res : (res.data || []);
+        
+        // Filter OPEN or IN_PROGRESS
+        allMeetings = list.filter(m => {
+          const s = (m.status || 'OPEN').toUpperCase();
+          return s === 'OPEN' || s === 'IN_PROGRESS';
+        });
+
+        if (allMeetings.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px 10px; color: var(--text-muted);">
+              <div style="font-size: 36px; margin-bottom: 10px;">📭</div>
+              <div style="font-size: 1.1rem; color: var(--text-main); font-weight: 700;">ขณะนี้ไม่มีการประชุมที่เปิดรับการเช็กอิน</div>
+              <div style="font-size: 0.88rem; margin-top: 4px;">กรุณาติดต่อผู้จัดหรือผู้ดูแลระบบ</div>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        allMeetings.forEach((m) => {
+          const isSel = selectedMeeting && selectedMeeting.meeting_id === m.meeting_id;
+          html += `
+            <div class="meeting-item-card ${isSel ? 'selected' : ''}" id="mtgCard_${m.meeting_id}" onclick="selectMeeting('${m.meeting_id}')">
+              <h3 class="meeting-item-title">${m.meeting_title || 'การประชุม'}</h3>
+              <div class="meeting-meta-row">
+                <span class="meeting-meta-item">📅 ${formatThaiDate(m.meeting_date)}</span>
+                <span class="meeting-meta-item">⏱️ ${formatTime(m.start_time)} - ${formatTime(m.end_time)}</span>
+                <span class="meeting-meta-item">📍 ${m.location_name || 'ห้องประชุม'}</span>
+              </div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+
+        // Auto select first if only one
+        if (allMeetings.length === 1 && !selectedMeeting) {
+          selectMeeting(allMeetings[0].meeting_id);
+        }
+
+      } catch (err) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px 10px; color: var(--error);">
+            เกิดข้อผิดพลาดในการโหลดการประชุม: ${err.message}
+          </div>
+        `;
+      }
+    }
+
+    function selectMeeting(meetingId) {
+      selectedMeeting = allMeetings.find(m => m.meeting_id === meetingId) || null;
+      document.querySelectorAll('.meeting-item-card').forEach(c => c.classList.remove('selected'));
+      const activeEl = document.getElementById('mtgCard_' + meetingId);
+      if (activeEl) activeEl.classList.add('selected');
+
+      document.getElementById('btnStep1Next').disabled = !selectedMeeting;
+    }
+
+    // Step 2: Render Summary
+    function renderStep2Summary() {
+      if (!selectedMeeting) return;
+      document.getElementById('summaryMtgTitle').textContent = selectedMeeting.meeting_title || '-';
+      document.getElementById('summaryMtgDate').textContent = formatThaiDate(selectedMeeting.meeting_date);
+      document.getElementById('summaryMtgTime').textContent = `${formatTime(selectedMeeting.start_time)} - ${formatTime(selectedMeeting.end_time)}`;
+      document.getElementById('summaryMtgLocation').textContent = selectedMeeting.location_name || 'สถานที่ที่กำหนด';
+    }
+
+    // Step 3: Face Recognition Pipeline & Lifecycle
+    function normalizeDescriptor(value) {
+      if (!value) return null;
+      if (value instanceof Float32Array) return value.length === 128 ? value : null;
+      let arr = null;
+      if (Array.isArray(value)) {
+        arr = value;
+      } else if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try { arr = JSON.parse(trimmed); } catch (e) { arr = trimmed.slice(1, -1).split(',').map(s => parseFloat(s.trim())); }
+        } else if (trimmed.includes(',')) {
+          arr = trimmed.split(',').map(s => parseFloat(s.trim()));
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        const keys = Object.keys(value).filter(k => !isNaN(parseInt(k))).sort((a, b) => parseInt(a) - parseInt(b));
+        if (keys.length === 128) arr = keys.map(k => parseFloat(value[k]));
+      }
+
+      if (arr && Array.isArray(arr) && arr.length === 128) {
+        const floatArr = new Float32Array(arr);
+        if (!isNaN(floatArr[0])) return floatArr;
+      }
+      return null;
+    }
+
+    async function loadAIModels() {
+      const badge = document.getElementById('badgeModel');
+      if (badge) {
+        badge.className = 'status-mini-val loading';
+        badge.textContent = 'กำลังโหลด...';
+      }
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        modelsLoaded = true;
+        console.log("Models loaded:", modelsLoaded);
+        if (badge) {
+          badge.className = 'status-mini-val ready';
+          badge.textContent = '✅ พร้อม';
+        }
+        checkAndStartRecognitionLoop();
+      } catch (err) {
+        console.error("AI Model Loading Error:", err);
+        if (badge) {
+          badge.className = 'status-mini-val error';
+          badge.textContent = '❌ ผิดพลาด';
+        }
+      }
+    }
+
+    async function loadKnownFaces() {
+      const badge = document.getElementById('badgeFaceDb');
+      const warnBox = document.getElementById('faceDbWarnBox');
+      const warnText = document.getElementById('faceDbWarnText');
+
+      if (badge) {
+        badge.className = 'status-mini-val loading';
+        badge.textContent = 'กำลังดึง...';
+      }
+      if (warnBox) warnBox.style.display = 'none';
+
+      let response = null;
+      try {
+        response = await apiFetch('getKnownFaces', selectedMeeting ? { meeting_id: selectedMeeting.meeting_id } : {});
+        console.log("Known faces response:", response);
+      } catch (err) {
+        console.warn("Error fetching known faces via apiFetch:", err.message);
+        // Fallback: try GAS direct if configured
+        try {
+          const directUrl = typeof getApiUrl === 'function' ? getApiUrl() : null;
+          if (directUrl && directUrl.includes('script.google.com')) {
+            const mtgParam = selectedMeeting ? `&meeting_id=${encodeURIComponent(selectedMeeting.meeting_id)}` : '';
+            const gasRes = await fetch(`${directUrl}?action=getKnownFaces${mtgParam}`);
+            if (gasRes.ok) response = await gasRes.json();
+          }
+        } catch (gasErr) {
+          console.warn("GAS direct fallback error:", gasErr);
+        }
+      }
+
+      const faceList = Array.isArray(response) ? response : (response && Array.isArray(response.data) ? response.data : []);
+
+      knownFaces = [];
+      groupedByLabel = {};
+      labeledDescriptors = [];
+
+      faceList.forEach(f => {
+        const rawDescriptor = f.descriptor || f.faceDescriptor || f.face_descriptor;
+        const label = (f.label || f.name || f.fullname || '').trim();
+        const empCode = f.employee_code || f.employeeCode || f.id || '';
+        const normalized = normalizeDescriptor(rawDescriptor);
+
+        if (normalized) {
+          if (!groupedByLabel[label]) {
+            groupedByLabel[label] = {
+              label: label,
+              employee_code: empCode,
+              fullname: f.fullname || f.name || f.label || label,
+              fullname_en: f.fullname_en || f.name_en || f.english_name || '',
+              registration_id: f.registration_id || '',
+              participant_type: f.participant_type || '',
+              meeting_id: f.meeting_id || '',
+              descriptors: []
+            };
+          }
+          groupedByLabel[label].descriptors.push(normalized);
+          knownFaces.push({ label, employee_code: empCode, descriptor: normalized });
+        }
+      });
+
+      console.log("Known faces count:", knownFaces.length);
+
+      Object.values(groupedByLabel).forEach(group => {
+        if (group.descriptors.length > 0) {
+          labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(group.label, group.descriptors));
+        }
+      });
+
+      if (labeledDescriptors.length > 0) {
+        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, MATCH_THRESHOLD);
+        knownFacesLoaded = true;
+        if (badge) {
+          badge.className = 'status-mini-val ready';
+          badge.textContent = `✅ ${knownFaces.length} คน`;
+        }
+        if (warnBox) warnBox.style.display = 'none';
+        checkAndStartRecognitionLoop();
+      } else {
+        knownFacesLoaded = false;
+        faceMatcher = null;
+        if (badge) {
+          badge.className = 'status-mini-val warn';
+          badge.textContent = '⚠️ ไม่มีข้อมูล';
+        }
+        if (warnBox) {
+          warnBox.style.display = 'flex';
+          warnText.textContent = '⚠️ ไม่พบฐานข้อมูลใบหน้าที่ลงทะเบียน กรุณาลงทะเบียนใบหน้าก่อน';
+        }
+        if (!recognizedEmployee) {
+          setFaceStatus('กล้องพร้อมตรวจจับใบหน้า', 'ยังไม่มีฐานข้อมูลสำหรับระบุตัวบุคคล แต่กรอบตรวจจับใบหน้ายังทำงานได้');
+        }
+      }
+    }
+
+    async function retryLoadFaceDatabase() {
+      await loadKnownFaces();
+    }
+
+    async function startFaceScanStep() {
+      goToStep(3);
+      knownFacesLoaded = false;
+      faceMatcher = null;
+      await loadKnownFaces();
+    }
+
+    function setFaceStatus(title, sub) {
+      const t = document.getElementById('faceStatusTitle');
+      const s = document.getElementById('faceStatusSub');
+      if (t) t.textContent = title;
+      if (s) s.textContent = sub;
+    }
+
+    async function startCamera() {
+      const video = document.getElementById('video');
+      const camOverlay = document.getElementById('camOverlay');
+      const camOverlayText = document.getElementById('camOverlayText');
+      const camOverlayIcon = document.getElementById('camOverlayIcon');
+      const badge = document.getElementById('badgeCamera');
+
+      console.log("Video element:", video);
+
+      if (!video) {
+        console.error("Camera video element not found");
+        return;
+      }
+
+      // Hide overlay
+      if (camOverlay) camOverlay.style.display = 'none';
+      if (badge) {
+        badge.className = 'status-mini-val loading';
+        badge.textContent = 'กำลังเปิด...';
+      }
+
+      // Stop previous stream if open
+      if (window.currentCameraStream) {
+        window.currentCameraStream.getTracks().forEach(track => track.stop());
+        window.currentCameraStream = null;
+      }
+
+      try {
+        console.log("Camera permission requested");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+
+        console.log("Camera stream:", stream);
+        window.currentCameraStream = stream;
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play().then(resolve).catch(resolve);
+          };
+        });
+
+        cameraReady = true;
+        console.log("Camera ready:", cameraReady);
+
+        if (badge) {
+          badge.className = 'status-mini-val ready';
+          badge.textContent = '✅ พร้อม';
+        }
+
+        checkAndStartRecognitionLoop();
+
+      } catch (error) {
+        cameraReady = false;
+        console.error("Camera error:", error);
+
+        let errorMsg = 'เกิดข้อผิดพลาดในการเปิดกล้อง';
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          errorMsg = 'ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้กล้องในเบราว์เซอร์';
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          errorMsg = 'ไม่พบอุปกรณ์กล้องบนอุปกรณ์ของคุณ';
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          errorMsg = 'ไม่สามารถใช้กล้องได้ อาจมีโปรแกรมอื่นกำลังใช้งานอยู่';
+        } else if (error.message) {
+          errorMsg = 'ข้อผิดพลาด: ' + error.message;
+        }
+
+        if (badge) {
+          badge.className = 'status-mini-val error';
+          badge.textContent = '❌ ไม่พร้อม';
+        }
+
+        if (camOverlay) {
+          camOverlayIcon.textContent = '📷';
+          camOverlayText.textContent = errorMsg;
+          camOverlay.style.display = 'flex';
+        }
+
+        setFaceStatus('❌ ไม่สามารถเปิดกล้องได้', errorMsg);
+      }
+    }
+
+    function stopCamera() {
+      if (window.currentCameraStream) {
+        window.currentCameraStream.getTracks().forEach(track => track.stop());
+        window.currentCameraStream = null;
+      }
+      const video = document.getElementById('video');
+      if (video) {
+        video.srcObject = null;
+      }
+      if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+      }
+      cameraReady = false;
+      const canvas = document.getElementById('overlayCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function cancelCameraAndGoBack(prevStep) {
+      stopCamera();
+      goToStep(prevStep);
+    }
+
+    function checkAndStartRecognitionLoop() {
+      // Detection starts as soon as camera + AI model are ready.
+      // Recognition/matching may wait for Face DB separately.
+      if (cameraReady && modelsLoaded) {
+        console.log("Face detection starting");
+
+        if (!recognizedEmployee) {
+          if (knownFacesLoaded && faceMatcher) {
+            setFaceStatus('กำลังตรวจจับและระบุตัวตน...', 'กรุณามองตรงที่กล้อง');
+          } else {
+            setFaceStatus('กำลังตรวจจับใบหน้า...', 'ระบบกำลังรอฐานข้อมูลสำหรับระบุตัวบุคคล');
+          }
+        }
+
+        startDetectionLoop();
+        return;
+      }
+
+      if (cameraReady && !modelsLoaded) {
+        setFaceStatus('กำลังโหลดโมเดล AI...', 'กรุณารอสักครู่');
+      }
+    }
+
+    function startDetectionLoop() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlayCanvas');
+      const guideText = document.getElementById('faceGuideText');
+      if (!video || !canvas) return;
+
+      if (scanInterval) clearInterval(scanInterval);
+
+      let detectionBusy = false;
+
+      function drawFaceBox(ctx, box, color, label) {
+        const x = box.x, y = box.y, w = box.width, h = box.height;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(3, canvas.width / 220);
+        ctx.shadowColor = 'rgba(0,0,0,.30)';
+        ctx.shadowBlur = 4;
+        ctx.strokeRect(x, y, w, h);
+        ctx.shadowBlur = 0;
+
+        const corner = Math.min(w, h) * 0.20;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(5, canvas.width / 150);
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(x, y + corner); ctx.lineTo(x, y); ctx.lineTo(x + corner, y);
+        ctx.moveTo(x + w - corner, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + corner);
+        ctx.moveTo(x, y + h - corner); ctx.lineTo(x, y + h); ctx.lineTo(x + corner, y + h);
+        ctx.moveTo(x + w - corner, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - corner);
+        ctx.stroke();
+
+        if (label) {
+          const fontSize = Math.max(16, Math.round(canvas.width / 36));
+          ctx.font = `700 ${fontSize}px Sarabun, sans-serif`;
+          const padX = 10, padY = 7;
+          const metrics = ctx.measureText(label);
+          const labelW = metrics.width + padX * 2;
+          const labelH = fontSize + padY * 2;
+          const lx = Math.max(4, Math.min(x, canvas.width - labelW - 4));
+          const ly = Math.max(labelH + 4, y) - labelH - 5;
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(lx, ly, labelW, labelH, 8);
+          } else {
+            ctx.rect(lx, ly, labelW, labelH);
+          }
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, lx + padX, ly + labelH / 2 + 1);
+        }
+      }
+
+      scanInterval = setInterval(async () => {
+        if (detectionBusy) return;
+        if (video.paused || video.ended || isVerifyingEligibility) return;
+        if (!modelsLoaded || !cameraReady) return;
+
+        detectionBusy = true;
+
+        try {
+          const displaySize = {
+            width: video.videoWidth || 640,
+            height: video.videoHeight || 480
+          };
+          faceapi.matchDimensions(canvas, displaySize);
+
+          let detection = null;
+          try {
+            detection = await faceapi
+              .detectSingleFace(
+                video,
+                new faceapi.SsdMobilenetv1Options({ minConfidence: 0.42 })
+              )
+              .withFaceLandmarks()
+              .withFaceDescriptor();
+          } catch (e) {
+            console.warn('Face detection error:', e);
+            return;
+          }
+
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (!detection) {
+            if (guideText) guideText.textContent = 'วางใบหน้าให้อยู่บริเวณกึ่งกลางกล้อง';
+            if (!recognizedEmployee) {
+              setFaceStatus('กำลังค้นหาใบหน้า...', 'ขยับใบหน้าให้อยู่ในกล้องและมองตรง');
+            }
+            return;
+          }
+
+          const resized = faceapi.resizeResults(detection, displaySize);
+          const box = resized.detection.box;
+
+          // Blue: a face is detected, regardless of Face DB availability.
+          if (!faceMatcher || !knownFacesLoaded) {
+            drawFaceBox(ctx, box, '#2563eb', 'ตรวจพบใบหน้า');
+            if (guideText) guideText.textContent = 'ตรวจพบใบหน้าแล้ว';
+
+            if (!recognizedEmployee) {
+              setFaceStatus(
+                '✅ ตรวจพบใบหน้า',
+                'กำลังรอฐานข้อมูลใบหน้าเพื่อระบุตัวบุคคล'
+              );
+            }
+            return;
+          }
+
+          const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+
+          if (bestMatch.label !== 'unknown' && bestMatch.distance < MATCH_THRESHOLD) {
+            const actualEmployee = groupedByLabel[bestMatch.label] || {
+              fullname: bestMatch.label,
+              employee_code: ''
+            };
+
+            // Green: detected and recognized.
+            drawFaceBox(ctx, box, '#059669', 'ยืนยันใบหน้า');
+            if (guideText) guideText.textContent = 'ตรวจพบและยืนยันใบหน้าแล้ว';
+
+            const newRecog = {
+              employee_code: actualEmployee.employee_code || '',
+              fullname: actualEmployee.fullname || bestMatch.label,
+              fullname_en: actualEmployee.fullname_en || '',
+              registration_id: actualEmployee.registration_id || '',
+              participant_type: actualEmployee.participant_type || '',
+              face_distance: parseFloat(bestMatch.distance.toFixed(4)),
+              face_confidence: Math.round((1 - bestMatch.distance) * 100)
+            };
+
+            if (!recognizedEmployee || recognizedEmployee.fullname !== newRecog.fullname) {
+              recognizedEmployee = newRecog;
+              setFaceStatus(
+                'พบใบหน้า กำลังตรวจสอบสิทธิ์...',
+                `${newRecog.fullname} • ความมั่นใจ ${newRecog.face_confidence}%`
+              );
+              await verifyEligibility(newRecog);
+            }
+          } else {
+            // Amber: face detected, but not matched.
+            drawFaceBox(ctx, box, '#d97706', 'ไม่พบในฐานข้อมูล');
+            if (guideText) guideText.textContent = 'ตรวจพบใบหน้า แต่ยังไม่ตรงกับข้อมูลที่ลงทะเบียน';
+
+            if (!recognizedEmployee) {
+              setFaceStatus(
+                'ตรวจพบใบหน้า แต่ยังระบุตัวบุคคลไม่ได้',
+                'กรุณามองตรง หรือใช้ใบหน้าที่ลงทะเบียนไว้'
+              );
+            }
+          }
+        } finally {
+          detectionBusy = false;
+        }
+      }, 280);
+    }
+
+    async function verifyEligibility(emp) {
+      if (!selectedMeeting) return;
+      isVerifyingEligibility = true;
+
+      try {
+        const res = await apiFetch('verifyMeetingEligibility', {}, 'POST', {
+          meeting_id: selectedMeeting.meeting_id,
+          employee_code: emp.employee_code,
+          fullname: emp.fullname,
+          fullname_en: emp.fullname_en || '',
+          registration_id: emp.registration_id || ''
+        });
+
+        if (res.eligible || res.success) {
+          const eligibilityData = res.data || {};
+          recognizedEmployee.registration_id = eligibilityData.registration_id || recognizedEmployee.registration_id || '';
+          recognizedEmployee.participant_type = eligibilityData.participant_type || recognizedEmployee.participant_type || '';
+          setFaceStatus('✅ ยืนยันตัวตนสำเร็จ', 'ข้อมูลถูกต้อง พร้อมดำเนินการต่อ');
+          
+          document.getElementById('matchedFullName').textContent = emp.fullname_en ? `${emp.fullname} / ${emp.fullname_en}` : emp.fullname;
+          document.getElementById('matchedEmpCode').textContent = emp.employee_code ? `รหัส: ${emp.employee_code}` : 'บุคลากรที่ลงทะเบียน';
+          document.getElementById('faceMatchedInfo').style.display = 'block';
+          document.getElementById('btnStep3Next').disabled = false;
+        } else {
+          setFaceStatus('❌ ท่านยังไม่ได้รับอนุมัติให้เข้าร่วม', res.message || 'กรุณารอผู้จัดอนุมัติการลงทะเบียน');
+          document.getElementById('btnStep3Next').disabled = true;
+          document.getElementById('faceMatchedInfo').style.display = 'none';
+        }
+      } catch (err) {
+        // V4.15: Identity match is NOT permission to attend.
+        // If approval verification is unavailable, block the flow.
+        setFaceStatus(
+          '⚠️ ตรวจสอบสิทธิ์ไม่สำเร็จ',
+          (err.message || 'ไม่สามารถเชื่อมต่อระบบอนุมัติได้') + ' — กรุณาลองใหม่'
+        );
+        document.getElementById('faceMatchedInfo').style.display = 'none';
+        document.getElementById('btnStep3Next').disabled = true;
+      } finally {
+        isVerifyingEligibility = false;
+      }
+    }
+
+    // Step 4: GPS Verification
+    function goToGpsStep() {
+      stopCamera();
+      goToStep(4);
+      checkGpsLocation();
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const phi1 = lat1 * Math.PI / 180;
+      const phi2 = lat2 * Math.PI / 180;
+      const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+      const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                Math.cos(phi1) * Math.cos(phi2) *
+                Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return Math.round(R * c);
+    }
+
+    function checkGpsLocation() {
+      const icon = document.getElementById('gpsIcon');
+      const main = document.getElementById('gpsStatusMain');
+      const sub = document.getElementById('gpsStatusSub');
+      const btnConfirm = document.getElementById('btnConfirmAttendance');
+      const btnRetry = document.getElementById('btnGpsRetry');
+
+      icon.textContent = '⏳';
+      main.textContent = 'กำลังตรวจสอบ GPS...';
+      sub.textContent = 'กรุณารอสักครู่';
+      btnConfirm.disabled = true;
+      btnRetry.style.display = 'none';
+
+      if (!navigator.geolocation) {
+        icon.textContent = '⚠️';
+        main.textContent = 'อุปกรณ์ไม่รองรับ GPS';
+        sub.textContent = 'อนุญาตให้บันทึกเวลาตามปกติ';
+        btnConfirm.disabled = false;
+        isGpsValid = true;
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+
+          const mtgLat = parseFloat(selectedMeeting.latitude);
+          const mtgLng = parseFloat(selectedMeeting.longitude);
+          const allowedRadius = parseFloat(selectedMeeting.allowed_radius_meters) || 200;
+
+          if (isNaN(mtgLat) || isNaN(mtgLng) || (mtgLat === 0 && mtgLng === 0)) {
+            // No strict GPS required
+            icon.textContent = '✅';
+            main.textContent = 'อยู่ในพื้นที่ที่กำหนด';
+            sub.textContent = 'การประชุมนี้ไม่ได้จำกัดพิกัด GPS';
+            btnConfirm.disabled = false;
+            isGpsValid = true;
+            return;
+          }
+
+          const dist = calculateDistance(userLat, userLng, mtgLat, mtgLng);
+          calculatedDistanceMeters = dist;
+
+          if (dist <= allowedRadius) {
+            icon.textContent = '✅';
+            main.textContent = 'อยู่ในพื้นที่ที่กำหนด';
+            sub.textContent = `ระยะห่าง ${dist} เมตร (เกณฑ์ ${allowedRadius} เมตร)`;
+            btnConfirm.disabled = false;
+            isGpsValid = true;
+          } else {
+            icon.textContent = '❌';
+            main.textContent = 'อยู่นอกพื้นที่ที่กำหนด';
+            sub.textContent = `ระยะห่าง ${dist} เมตร (เกินเกณฑ์ ${allowedRadius} เมตร)`;
+            btnConfirm.disabled = true;
+            btnRetry.style.display = 'flex';
+            isGpsValid = false;
+          }
+        },
+        (err) => {
+          console.warn("GPS Warning:", err.message);
+          icon.textContent = '📍';
+          main.textContent = 'ไม่สามารถดึงพิกัด GPS ได้';
+          sub.textContent = 'บันทึกเวลาโดยใช้การยืนยันตัวตนด้วยใบหน้า';
+          btnConfirm.disabled = false;
+          isGpsValid = true;
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    function setAttendanceActionStatus(type, message) {
+      const el = document.getElementById('attendanceActionStatus');
+      if (!el) return;
+
+      el.className = `attendance-action-status ${type || 'info'}`;
+      el.textContent = message || '';
+    }
+
+    function normalizeAttendanceValue(value) {
+      return String(value ?? '').trim().toLowerCase();
+    }
+
+    async function findExistingAttendance() {
+      if (!selectedMeeting || !recognizedEmployee) return null;
+
+      try {
+        const res = await apiFetch(
+          'getMeetingAttendance',
+          { meeting_id: selectedMeeting.meeting_id },
+          'GET',
+          null,
+          9000
+        );
+
+        const rows = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : [];
+
+        const regId = normalizeAttendanceValue(recognizedEmployee.registration_id);
+        const empCode = normalizeAttendanceValue(recognizedEmployee.employee_code);
+        const fullname = normalizeAttendanceValue(recognizedEmployee.fullname);
+
+        return rows.find(row => {
+          const rowMeeting = normalizeAttendanceValue(row.meeting_id || row.meetingId);
+          if (rowMeeting && rowMeeting !== normalizeAttendanceValue(selectedMeeting.meeting_id)) {
+            return false;
+          }
+
+          const rowReg = normalizeAttendanceValue(row.registration_id || row.registrationId);
+          const rowEmp = normalizeAttendanceValue(row.employee_code || row.employeeCode);
+          const rowName = normalizeAttendanceValue(row.fullname || row.name);
+
+          if (regId && rowReg && regId === rowReg) return true;
+          if (empCode && rowEmp && empCode === rowEmp) return true;
+          if (fullname && rowName && fullname === rowName) return true;
+
+          return false;
+        }) || null;
+      } catch (err) {
+        console.warn('Attendance pre-check unavailable:', err.message);
+        return null;
+      }
+    }
+
+    // Step 5: Execute Attendance Action & Show Receipt
+    async function executeAttendanceAction() {
+      const btnConfirm = document.getElementById('btnConfirmAttendance');
+      const btnText = document.getElementById('btnConfirmText');
+      const spinner = document.getElementById('btnConfirmSpinner');
+
+      if (!selectedMeeting) {
+        setAttendanceActionStatus('error', '❌ ไม่พบข้อมูลการประชุม กรุณาย้อนกลับไปเลือกการประชุมอีกครั้ง');
+        return;
+      }
+
+      if (!recognizedEmployee) {
+        setAttendanceActionStatus('error', '❌ ไม่พบข้อมูลผู้เข้าร่วม กรุณาย้อนกลับไปสแกนใบหน้าอีกครั้ง');
+        return;
+      }
+
+      if (!isGpsValid) {
+        setAttendanceActionStatus('warning', '⚠️ กรุณาตรวจสอบตำแหน่ง GPS ให้ผ่านก่อน');
+        return;
+      }
+
+      btnText.style.display = 'none';
+      spinner.style.display = 'inline-block';
+      btnConfirm.disabled = true;
+
+      const actionName =
+        attendanceMode === 'CHECK_OUT'
+          ? 'meetingCheckOut'
+          : 'meetingCheckIn';
+
+      setAttendanceActionStatus(
+        'info',
+        attendanceMode === 'CHECK_OUT'
+          ? 'กำลังบันทึกเวลาออก กรุณารอสักครู่...'
+          : 'กำลังบันทึกเวลาเข้าร่วม กรุณารอสักครู่...'
+      );
+
+      try {
+        const existing = await findExistingAttendance();
+
+        if (attendanceMode === 'CHECK_IN' && existing) {
+          const existingCheckIn =
+            existing.checkin_time ||
+            existing.check_in_time ||
+            existing.checkInTime;
+
+          if (existingCheckIn) {
+            setAttendanceActionStatus(
+              'warning',
+              `⚠️ คุณได้เช็กอินการประชุมนี้แล้ว${existingCheckIn ? ` เวลา ${existingCheckIn}` : ''} ไม่ต้องเช็กอินซ้ำ`
+            );
+            btnConfirm.disabled = false;
+            return;
+          }
+        }
+
+        if (attendanceMode === 'CHECK_OUT') {
+          if (!existing) {
+            setAttendanceActionStatus(
+              'warning',
+              '⚠️ ยังไม่พบข้อมูล Check-in ของการประชุมนี้ กรุณา Check-in ก่อน'
+            );
+            btnConfirm.disabled = false;
+            return;
+          }
+
+          const existingCheckOut =
+            existing.checkout_time ||
+            existing.check_out_time ||
+            existing.checkOutTime;
+
+          if (existingCheckOut) {
+            setAttendanceActionStatus(
+              'warning',
+              `⚠️ คุณได้เช็กเอาต์การประชุมนี้แล้ว${existingCheckOut ? ` เวลา ${existingCheckOut}` : ''}`
+            );
+            btnConfirm.disabled = false;
+            return;
+          }
+        }
+
+        const payload = {
+          meeting_id: selectedMeeting.meeting_id,
+          registration_id: recognizedEmployee.registration_id || '',
+          participant_type:
+            recognizedEmployee.participant_type ||
+            (recognizedEmployee.employee_code ? 'INTERNAL' : 'EXTERNAL'),
+          employee_code: recognizedEmployee.employee_code || '',
+          fullname: recognizedEmployee.fullname || '',
+          fullname_en: recognizedEmployee.fullname_en || '',
+          face_verified: true,
+          latitude: userLat || 0,
+          longitude: userLng || 0,
+          face_distance: recognizedEmployee.face_distance || 0.2,
+          face_confidence: recognizedEmployee.face_confidence || 85,
+          device_info: navigator.userAgent
+        };
+
+        const res = await apiFetch(
+          actionName,
+          {},
+          'POST',
+          payload,
+          22000
+        );
+
+        if (!res || res.success !== true) {
+          throw new Error(
+            res?.message ||
+            'ระบบไม่สามารถบันทึกข้อมูลลง Google Sheets ได้'
+          );
+        }
+
+        setAttendanceActionStatus(
+          'success',
+          attendanceMode === 'CHECK_OUT'
+            ? '✅ บันทึกเวลาออกเรียบร้อย'
+            : '✅ บันทึกเวลาเข้าร่วมเรียบร้อย'
+        );
+
+        document.getElementById('successName').textContent =
+          res.fullname ||
+          (
+            recognizedEmployee.fullname_en
+              ? `${recognizedEmployee.fullname} / ${recognizedEmployee.fullname_en}`
+              : recognizedEmployee.fullname
+          );
+
+        document.getElementById('successMeeting').textContent =
+          selectedMeeting.meeting_title || 'การประชุม';
+
+        const backendTime =
+          attendanceMode === 'CHECK_OUT'
+            ? res.checkout_time
+            : res.checkin_time;
+
+        const nowTimeStr =
+          backendTime ||
+          new Date().toLocaleTimeString(
+            'th-TH',
+            { hour: '2-digit', minute: '2-digit' }
+          );
+
+        const badgeEl =
+          document.getElementById('attendanceStatusBadge');
+
+        if (attendanceMode === 'CHECK_OUT') {
+          document.getElementById('successTitle').textContent =
+            'เช็กเอาต์สำเร็จ';
+
+          document.getElementById('successTimeLabel').textContent =
+            'เวลาออก';
+
+          document.getElementById('successTime').textContent =
+            nowTimeStr;
+
+          const st =
+            (
+              res.final_status ||
+              res.attendance_status ||
+              res.status ||
+              'COMPLETED'
+            ).toUpperCase();
+
+          if (st === 'EARLY_LEAVE') {
+            badgeEl.className =
+              'attendance-status-badge badge-earlyleave';
+            badgeEl.textContent =
+              '🟠 ออกก่อนเวลา';
+          } else {
+            badgeEl.className =
+              'attendance-status-badge badge-completed';
+            badgeEl.textContent =
+              '🟢 เข้าร่วมสมบูรณ์';
+          }
+        } else {
+          document.getElementById('successTitle').textContent =
+            'เช็กอินสำเร็จ';
+
+          document.getElementById('successTimeLabel').textContent =
+            'เวลาเข้า';
+
+          document.getElementById('successTime').textContent =
+            nowTimeStr;
+
+          const st =
+            (
+              res.checkin_status ||
+              res.attendance_status ||
+              res.status ||
+              'ON_TIME'
+            ).toUpperCase();
+
+          if (st === 'LATE') {
+            badgeEl.className =
+              'attendance-status-badge badge-late';
+            badgeEl.textContent =
+              '🟡 มาสาย';
+          } else if (st === 'LATE_CRITICAL') {
+            badgeEl.className =
+              'attendance-status-badge badge-latecritical';
+            badgeEl.textContent =
+              '🔴 สายเกินเกณฑ์';
+          } else {
+            badgeEl.className =
+              'attendance-status-badge badge-ontime';
+            badgeEl.textContent =
+              '🟢 ตรงเวลา';
+          }
+        }
+
+        goToStep(5);
+
+      } catch (err) {
+        const message = err?.message || String(err);
+
+        const duplicateWords = [
+          'already',
+          'duplicate',
+          'เช็กอินแล้ว',
+          'check-in แล้ว',
+          'checkin แล้ว',
+          'บันทึกเวลาเข้าแล้ว'
+        ];
+
+        const isDuplicate = duplicateWords.some(
+          word => message.toLowerCase().includes(word.toLowerCase())
+        );
+
+        setAttendanceActionStatus(
+          isDuplicate ? 'warning' : 'error',
+          isDuplicate
+            ? '⚠️ ' + message
+            : '❌ บันทึกเวลาไม่สำเร็จ: ' + message
+        );
+
+        btnConfirm.disabled = false;
+      } finally {
+        btnText.style.display = 'inline-block';
+        spinner.style.display = 'none';
+      }
+    }
+
+    // Start on DOM ready
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

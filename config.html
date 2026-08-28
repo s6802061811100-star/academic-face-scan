@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ตั้งค่าระบบ (Settings &amp; Face DB)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #6366f1;
+      --cyan: #06b6d4;
+      --success: #10b981;
+      --error: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 10%, #1a1a3e 0%, #0b0f19 75%, #050811 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 60px;
+    }
+
+    /* Navbar */
+    .navbar {
+      width: 100%;
+      max-width: 900px;
+      padding: 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-icon {
+      font-size: 24px;
+      background: linear-gradient(135deg, #64748b, #334155);
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+    }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .nav-btn {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-header p { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+
+    /* Card */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      backdrop-filter: blur(12px);
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .form-label { font-size: 0.85rem; font-weight: 600; color: #cbd5e1; }
+    .form-input {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--primary); }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    .btn-loc {
+      background: linear-gradient(135deg, #0891b2, #06b6d4);
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    /* Face Library Table */
+    .face-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .face-table th, .face-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .face-table th { color: var(--muted); font-weight: 600; }
+    .btn-del {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .btn-del:hover { background: #ef4444; color: #fff; }
+
+    /* Connection Status Grid & Badges */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .status-item {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .status-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .status-value {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .badge-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-loading {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    @media (max-width: 600px) {
+      .input-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <header class="navbar">
+    <a href="index.html" class="nav-brand">
+      <div class="brand-icon">⚙️</div>
+      <div>
+        <div style="font-weight:700; font-size:1.1rem;">ตั้งค่าระบบ &amp; ฐานข้อมูลใบหน้า</div>
+        <div style="font-size:0.75rem; color:#94a3b8;">System Configuration &amp; Face DB</div>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="admin.html" class="nav-btn" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #c7d2fe;">⚙️ เมนูผู้ดูแลระบบ</a>
+      <a href="meetings.html" class="nav-btn">📅 จัดการประชุม</a>
+      <a href="dashboard.html" class="nav-btn">📊 แดชบอร์ด</a>
+      <a href="index.html" class="nav-btn">🏠 หน้าหลักผู้ใช้</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>การตั้งค่า GPS และคลังใบหน้าพนักงาน</h1>
+      <p>กำหนดจุดพิกัดสำนักงาน รัศมีตรวจสอบ และจัดการรายชื่อใบหน้าที่ลงทะเบียน</p>
+    </div>
+
+    <!-- Connection Status Card -->
+    <div class="card" id="connectionStatusCard">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
+        <h2 class="card-title" style="margin-bottom:0; border:none; padding:0;">🔗 สถานะการเชื่อมต่อระบบ</h2>
+        <button type="button" id="btnTestConn" class="btn btn-loc" style="margin-bottom:0; padding:8px 14px; font-size:0.85rem;" onclick="testSystemConnection()">
+          🔄 ทดสอบการเชื่อมต่อ
+        </button>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="status-label">Google Apps Script</div>
+          <div class="status-value" id="gasStatus">
+            <span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">Google Sheets</div>
+          <div class="status-value" id="sheetsStatus">
+            <span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">API Status</div>
+          <div class="status-value" id="apiStatus">
+            <span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="connDetails" style="margin-top:14px; padding:12px; background:rgba(0,0,0,0.3); border-radius:10px; border:1px solid rgba(255,255,255,0.05); font-size:0.82rem; color:var(--muted); display:none;">
+        <div id="connMsg" style="color:#cbd5e1; margin-bottom:4px;"></div>
+        <div id="sheetsList" style="font-family:monospace; color:#38bdf8;"></div>
+      </div>
+    </div>
+
+    <!-- GPS Config -->
+    <div class="card">
+      <h2 class="card-title">📍 จุดเช็คอิน GPS และสำนักงาน</h2>
+
+      <button type="button" class="btn btn-loc" onclick="getCurrentLocation()">
+        📍 ดึงตำแหน่งปัจจุบันของฉัน (GPS Geolocation)
+      </button>
+
+      <div class="form-group">
+        <label class="form-label">ชื่อสถานที่ / สำนักงาน</label>
+        <input type="text" id="officeName" class="form-input" placeholder="เช่น สำนักงานใหญ่ (KMUTNB HQ)">
+      </div>
+
+      <div class="input-grid">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input type="number" step="any" id="lat" class="form-input" placeholder="13.8198">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input type="number" step="any" id="lng" class="form-input" placeholder="100.5144">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">รัศมีที่ยอมรับ (เมตร)</label>
+        <input type="number" step="10" id="radius" class="form-input" placeholder="เช่น 500 (เมตร)">
+        <span style="font-size:0.75rem; color:var(--muted); margin-top:4px;">* ใส่ 0 หากไม่ต้องการจำกัดพื้นที่สแกน</span>
+      </div>
+
+      <div class="form-group" style="margin-top:14px;">
+        <label class="form-label">API Endpoint (สำหรับ Google Apps Script / Node.js Backend)</label>
+        <input type="text" id="apiUrl" class="form-input" placeholder="/api">
+      </div>
+
+      <button type="button" class="btn btn-save" onclick="saveAllConfig()">
+        💾 บันทึกการตั้งค่าทั้งหมด
+      </button>
+    </div>
+
+    <!-- Face Database Manager -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h2 class="card-title" style="margin-bottom:0; border:none; padding:0;">👤 ฐานข้อมูลใบหน้าที่ลงทะเบียน (<span id="faceCount">0</span> คน)</h2>
+        <a href="register.html" class="nav-btn" style="background:rgba(99,102,241,0.2); color:#a5b4fc; font-size:0.8rem;">+ ลงทะเบียนใบหน้าเพิ่ม</a>
+      </div>
+
+      <table class="face-table">
+        <thead>
+          <tr>
+            <th>ชื่อ - นามสกุล</th>
+            <th>แผนก</th>
+            <th>วันที่ลงทะเบียน</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="faceTableBody">
+          <tr><td colspan="4" style="text-align:center; color:var(--muted);">กำลังโหลดข้อมูลใบหน้า...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    let knownFaces = [];
+
+    async function testSystemConnection() {
+      const btn = document.getElementById('btnTestConn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ กำลังทดสอบ...';
+      }
+
+      const gasElem = document.getElementById('gasStatus');
+      const sheetsElem = document.getElementById('sheetsStatus');
+      const apiElem = document.getElementById('apiStatus');
+      const detailsDiv = document.getElementById('connDetails');
+      const connMsg = document.getElementById('connMsg');
+      const sheetsList = document.getElementById('sheetsList');
+
+      gasElem.innerHTML = '<span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>';
+      sheetsElem.innerHTML = '<span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>';
+      apiElem.innerHTML = '<span class="badge badge-loading">⏳ กำลังตรวจสอบ...</span>';
+      if (detailsDiv) detailsDiv.style.display = 'none';
+
+      let healthOk = false;
+      let sheetsOk = false;
+      let healthData = null;
+      let sheetsData = null;
+
+      try {
+        const healthRes = await fetch('/api/system/health');
+        healthData = await healthRes.json();
+        healthOk = healthRes.ok && healthData.success;
+      } catch (err) {
+        healthData = { error: err.message };
+      }
+
+      try {
+        const sheetsRes = await fetch('/api/system/sheets');
+        sheetsData = await sheetsRes.json();
+        sheetsOk = sheetsRes.ok && sheetsData.success;
+      } catch (err) {
+        sheetsData = { error: err.message };
+      }
+
+      // Display Status as requested:
+      // Google Apps Script   ✅ เชื่อมต่อ
+      // Google Sheets        ✅ เชื่อมต่อ
+      // API Status           🟢 Online
+      if (healthOk) {
+        gasElem.innerHTML = '<span class="badge badge-success">✅ เชื่อมต่อ</span>';
+        apiElem.innerHTML = '<span class="badge badge-success">🟢 Online</span>';
+      } else {
+        gasElem.innerHTML = '<span class="badge badge-error">❌ ไม่สามารถเชื่อมต่อ</span>';
+        apiElem.innerHTML = '<span class="badge badge-error">🔴 Offline</span>';
+      }
+
+      if (sheetsOk) {
+        sheetsElem.innerHTML = '<span class="badge badge-success">✅ เชื่อมต่อ</span>';
+      } else {
+        sheetsElem.innerHTML = '<span class="badge badge-error">❌ ไม่สามารถเชื่อมต่อ</span>';
+      }
+
+      if (detailsDiv) {
+        detailsDiv.style.display = 'block';
+        const timeStr = new Date().toLocaleTimeString('th-TH');
+        if (healthOk && sheetsOk) {
+          const sheetsArr = Array.isArray(sheetsData.sheets) ? sheetsData.sheets : [];
+          connMsg.innerHTML = `✅ ตรวจสอบระบบสำเร็จเมื่อ ${timeStr} — ข้อความตอบกลับ: "${escapeHtml(healthData.message || 'Smart Meeting API is working')}"`;
+          if (sheetsArr.length > 0) {
+            sheetsList.innerHTML = `📑 แผ่นงานที่พบใน Google Spreadsheet (${sheetsArr.length}): ${sheetsArr.map(s => typeof s === 'string' ? escapeHtml(s) : escapeHtml(s.name || JSON.stringify(s))).join(', ')}`;
+          } else {
+            sheetsList.innerHTML = `📑 เชื่อมต่อ Google Spreadsheet สำเร็จ (ID: 1INlDW4p69hzPbhcaD0DnJVeBUkPxIgQRk6W8ZIbAEvQ)`;
+          }
+          showToast('ทดสอบการเชื่อมต่อสำเร็จ: ระบบ Online และพร้อมทำงาน', 'success');
+        } else {
+          connMsg.innerHTML = `⚠️ ข้อผิดพลาด: ${escapeHtml(healthData.error || sheetsData.error || 'ไม่สามารถติดต่อ Google Apps Script Backend ได้')}`;
+          sheetsList.innerHTML = `URL: ${escapeHtml(healthData.gasUrl || GAS_API_URL)}`;
+          showToast('ไม่สามารถเชื่อมต่อ Google Apps Script ได้สมบูรณ์', 'warning');
+        }
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 ทดสอบการเชื่อมต่อ';
+      }
+    }
+
+    async function loadConfig() {
+      const savedUrl = getGasUrl();
+      document.getElementById('apiUrl').value = savedUrl;
+
+      try {
+        const config = await apiFetch('getConfig');
+        if (config) {
+          document.getElementById('officeName').value = config.officeName || 'สำนักงานใหญ่ (KMUTNB HQ)';
+          document.getElementById('lat').value = config.lat || '13.8198';
+          document.getElementById('lng').value = config.lng || '100.5144';
+          document.getElementById('radius').value = config.radius || '500';
+        }
+      } catch (err) {
+        console.warn('Could not load config', err);
+      }
+
+      await loadFaceDb();
+      testSystemConnection();
+    }
+
+    async function loadFaceDb() {
+      try {
+        const faces = await apiFetch('getKnownFaces');
+        knownFaces = Array.isArray(faces) ? faces : [];
+        document.getElementById('faceCount').textContent = knownFaces.length;
+
+        const tbody = document.getElementById('faceTableBody');
+        if (knownFaces.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted);">ยังไม่มีใบหน้าที่ลงทะเบียนในระบบ</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = knownFaces.map(f => `
+          <tr>
+            <td style="font-weight:600; color:#fff;">${escapeHtml(f.label)}</td>
+            <td style="color:#cbd5e1;">${escapeHtml(f.department || 'ทั่วไป')}</td>
+            <td style="color:var(--muted); font-size:0.8rem;">${f.createdAt ? new Date(f.createdAt).toLocaleDateString('th-TH') : '-'}</td>
+            <td>
+              <button class="btn-del" onclick="deleteFace('${f.id || ''}', '${escapeHtml(f.label)}')">ลบ</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function getCurrentLocation() {
+      if (!navigator.geolocation) return showToast('Browser ไม่รองรับ Geolocation', 'error');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          document.getElementById('lat').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('lng').value = pos.coords.longitude.toFixed(6);
+          showToast('ดึงพิกัดปัจจุบันสำเร็จ', 'success');
+        },
+        err => showToast('ไม่สามารถดึงตำแหน่งได้: ' + err.message, 'error'),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    async function saveAllConfig() {
+      const apiUrl = document.getElementById('apiUrl').value.trim();
+      const officeName = document.getElementById('officeName').value.trim();
+      const lat = document.getElementById('lat').value;
+      const lng = document.getElementById('lng').value;
+      const radius = document.getElementById('radius').value;
+
+      localStorage.setItem('gasApiUrl', apiUrl);
+
+      try {
+        const res = await apiFetch('saveConfig', { officeName, lat, lng, radius, gas_url: apiUrl }, 'POST');
+        if (res.success) {
+          showToast('บันทึกการตั้งค่าเรียบร้อย', 'success');
+        } else {
+          showToast('บันทึกไม่สำเร็จ', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteFace(id, label) {
+      if (!confirm(`ยืนยันการลบข้อมูลใบหน้า "${label}" ?`)) return;
+      try {
+        const res = await apiFetch('deleteUserFace', { id, label }, 'POST');
+        if (res.success) {
+          showToast('ลบข้อมูลใบหน้าเรียบร้อย', 'success');
+          loadFaceDb();
+        }
+      } catch (err) {
+        showToast('ลบไม่สำเร็จ', 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadConfig);
+  </script>
+</body>
+</html>

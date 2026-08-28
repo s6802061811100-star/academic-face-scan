@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกการประชุม & AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--primary:#4f46e5;--primary2:#4338ca;--success:#059669;--danger:#dc2626;--warning:#d97706;--soft:#f1f5f9;--shadow:0 14px 36px rgba(15,23,42,.08)}
+    body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:clamp(14px,3vw,28px) 14px 48px}
+    .shell{width:100%;max-width:920px;margin:0 auto}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .pill{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#475569;font-weight:700;background:#fff;border:1px solid var(--border);border-radius:999px;padding:10px 16px}
+    .mode{color:#7c2d12;background:#fff7ed;border-color:#fed7aa}
+    .step-row{display:flex;justify-content:space-between;gap:12px;font-weight:700;color:#475569;font-size:clamp(14px,2vw,16px);margin:0 2px 8px}
+    .progress{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-bottom:22px}.bar{height:100%;width:20%;background:linear-gradient(90deg,#4f46e5,#7c3aed);transition:.3s}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:28px;box-shadow:var(--shadow);padding:clamp(20px,4vw,34px)}
+    .hero{text-align:center;margin-bottom:26px}.hero-icon{font-size:54px}.hero h1{font-size:clamp(28px,5vw,38px);margin-top:8px}.hero p{font-size:clamp(16px,2.4vw,18px);color:var(--muted);margin-top:8px;line-height:1.65}
+    .step{display:none}.step.active{display:block}
+    .meeting-list{display:grid;gap:12px}.meeting-option{width:100%;text-align:left;border:2px solid var(--border);background:#fff;border-radius:18px;padding:18px;cursor:pointer;font-family:inherit;color:inherit}.meeting-option:hover{border-color:#c7d2fe}.meeting-option.selected{border-color:#6366f1;background:#eef2ff}.meeting-title{font-size:19px;font-weight:800}.meeting-meta{margin-top:6px;color:var(--muted);line-height:1.6}
+    .empty,.notice,.status-box,.result-box{border:1px solid var(--border);background:#f8fafc;border-radius:18px;padding:18px;line-height:1.65}.empty{text-align:center;color:var(--muted)}
+    .status-box{text-align:center;padding:26px}.status-icon{font-size:48px}.status-title{font-size:24px;font-weight:800;margin-top:8px}.status-text{color:var(--muted);margin-top:6px}
+    .recording-box{border:2px solid var(--border);border-radius:24px;padding:26px;text-align:center;background:#fff}.recording-box.is-recording{border-color:#fecaca;background:#fff7f7}.recording-dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;margin-right:8px}.timer{font-size:clamp(46px,9vw,76px);font-weight:800;letter-spacing:2px;margin:18px 0}.record-state{color:var(--muted)}
+    .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+    .btn{min-height:56px;border:none;border-radius:16px;font-family:inherit;font-size:18px;font-weight:800;cursor:pointer;padding:12px 18px}.btn:disabled{opacity:.42;cursor:not-allowed}.primary{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}.secondary{background:#fff;border:1px solid var(--border);color:#475569}.success{background:#10b981;color:#fff}.danger{background:#ef4444;color:#fff}.warning{background:#f59e0b;color:#fff}
+    .actions{display:grid;gap:12px;margin-top:18px}.actions.two{grid-template-columns:1fr 1fr}
+    .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.info{background:#f8fafc;border:1px solid var(--border);border-radius:16px;padding:16px}.label{color:var(--muted);font-size:14px;font-weight:700}.value{font-weight:800;font-size:18px;margin-top:5px;overflow-wrap:anywhere}
+    .audio-wrap{padding:14px;border:1px solid var(--border);border-radius:16px;background:#fff;margin:14px 0}.audio-wrap audio{width:100%}
+    .section-title{font-size:22px;font-weight:800;margin:22px 0 10px}.textarea{width:100%;min-height:260px;resize:vertical;border:1px solid var(--border);border-radius:16px;padding:16px;font-family:inherit;font-size:16px;line-height:1.7;background:#fff;color:var(--text)}
+    .loading{display:none;align-items:center;gap:10px;justify-content:center;padding:14px;color:#4338ca;font-weight:800}.loading.show{display:flex}.spinner{width:20px;height:20px;border:3px solid #c7d2fe;border-top-color:#4f46e5;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .ai-status{margin:12px 0;padding:12px 14px;border-radius:14px;font-weight:700}.ai-ok{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.ai-bad{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .transcribe-status{display:none;margin-top:14px;padding:14px 16px;border-radius:14px;font-weight:700;line-height:1.6}.transcribe-status.show{display:block}.transcribe-status.info{background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe}.transcribe-status.ok{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.transcribe-status.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.cloud-box{margin:16px 0;border:1px solid #bfdbfe;background:#eff6ff;border-radius:18px;padding:18px}.cloud-title{font-size:18px;font-weight:800;color:#1e3a8a;margin-bottom:6px}.cloud-help{color:#475569;line-height:1.6;margin-bottom:12px}.cloud-row{display:grid;grid-template-columns:1fr auto;gap:10px}.cloud-input{width:100%;min-height:48px;border:1px solid #cbd5e1;border-radius:12px;padding:10px 12px;font-family:inherit;font-size:15px;color:#0f172a;background:#fff}.cloud-status{display:none;margin-top:12px;padding:12px 14px;border-radius:12px;font-weight:700;line-height:1.6}.cloud-status.show{display:block}.cloud-status.info{background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe}.cloud-status.ok{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.cloud-status.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.cloud-status a{color:inherit;font-weight:800}
+    .summary-card{border:1px solid var(--border);border-radius:18px;padding:18px;background:#fff;margin-top:12px}.summary-card h3{font-size:18px;margin-bottom:8px}.summary-card p,.summary-card li{line-height:1.7;color:#334155}.summary-card ul{padding-left:22px}.action-table{width:100%;border-collapse:collapse;margin-top:8px}.action-table th,.action-table td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top;font-size:14px}.action-table th{background:#f8fafc}
+    .hidden{display:none!important}
+    @media(max-width:700px){.controls,.actions.two,.review-grid,.cloud-row{grid-template-columns:1fr}.card{border-radius:22px}.btn{font-size:17px}.topbar{align-items:flex-start;flex-wrap:wrap}.meeting-title{font-size:18px}.action-table{display:block;overflow-x:auto;white-space:nowrap}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <a class="pill" href="index.html">← กลับหน้าหลัก</a>
+    <span class="pill mode">🎙️ Meeting Recorder + AI</span>
+  </div>
+
+  <div class="step-row"><span id="stepText">ขั้นตอน 1 จาก 5 : เลือกการประชุม</span><span id="percent">20%</span></div>
+  <div class="progress"><div class="bar" id="progressBar"></div></div>
+
+  <section class="card">
+    <div class="hero">
+      <div class="hero-icon">🎙️</div>
+      <h1>บันทึกการประชุมอัจฉริยะ</h1>
+      <p>บันทึกเสียง → ถอดเสียงด้วย Gemini → สรุปสาระสำคัญ มติ และงานที่มอบหมาย</p>
+    </div>
+
+    <div class="step active" id="step1">
+      <div id="meetingList" class="meeting-list"><div class="empty">กำลังโหลดรายการประชุม...</div></div>
+      <div class="actions"><button class="btn primary" id="toStep2" disabled>ถัดไป →</button></div>
+    </div>
+
+    <div class="step" id="step2">
+      <div class="status-box">
+        <div class="status-icon">🎤</div>
+        <div class="status-title" id="micTitle">เตรียมไมโครโฟน</div>
+        <div class="status-text" id="micText">อนุญาตการใช้ไมโครโฟนก่อนเริ่มบันทึก</div>
+      </div>
+      <div id="aiStatus" class="ai-status ai-bad">กำลังตรวจสอบ Gemini AI...</div>
+      <div class="actions">
+        <button class="btn primary" id="prepareMic">🎤 ตรวจสอบไมโครโฟน</button>
+        <button class="btn primary" id="toStep3" disabled>ไปหน้าบันทึก →</button>
+        <button class="btn secondary" id="back1">← ย้อนกลับ</button>
+      </div>
+    </div>
+
+    <div class="step" id="step3">
+      <div class="recording-box" id="recordingBox">
+        <div><span class="recording-dot"></span><strong id="recordLabel">พร้อมบันทึก</strong></div>
+        <div class="timer" id="timer">00:00:00</div>
+        <div class="record-state" id="recordState">กด “เริ่มบันทึก” เมื่อพร้อม</div>
+        <div class="controls">
+          <button class="btn primary" id="startBtn">⏺ เริ่มบันทึก</button>
+          <button class="btn secondary" id="pauseBtn" disabled>⏸ หยุดชั่วคราว</button>
+          <button class="btn danger" id="stopBtn" disabled>⏹ จบการบันทึก</button>
+        </div>
+      </div>
+      <div class="notice" style="margin-top:16px">แนะนำให้ทดสอบ 20–60 วินาทีก่อน สำหรับรอบแรก เพื่อให้ตรวจการเชื่อม AI ได้ง่ายและรวดเร็ว</div>
+      <div class="actions"><button class="btn secondary" id="back2">← ย้อนกลับ</button></div>
+    </div>
+
+    <div class="step" id="step4">
+      <div class="review-grid">
+        <div class="info"><div class="label">การประชุม</div><div class="value" id="reviewMeeting">-</div></div>
+        <div class="info"><div class="label">ระยะเวลาบันทึก</div><div class="value" id="reviewDuration">-</div></div>
+      </div>
+      <div class="audio-wrap"><audio id="audioPlayer" controls></audio></div>
+
+      <div class="cloud-box">
+        <div class="cloud-title">🔒 Google Drive — Smart Meeting Records</div>
+        <div class="cloud-help">Production Mode: Records API URL และ Security Token ถูกเก็บไว้ฝั่ง Server ไม่แสดงใน Browser</div>
+        <div id="cloudStatus" class="cloud-status show info">กำลังตรวจสอบระบบจัดเก็บ...</div>
+      </div>
+
+      <div class="actions two">
+        <button class="btn success" id="uploadDriveBtn">☁️ บันทึกเสียงเข้า Google Drive</button>
+        <button class="btn secondary" id="saveAudioBtn">💾 ดาวน์โหลดเสียงไว้ในเครื่อง</button>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="transcribeBtn">📝 ถอดเสียงด้วย Gemini →</button>
+      </div>
+      <div class="loading" id="transcribeLoading"><span class="spinner"></span><span id="transcribeLoadingText">กำลังถอดเสียง กรุณารอสักครู่...</span></div>
+      <div id="transcribeStatus" class="transcribe-status"></div>
+      <div id="transcriptArea" class="hidden">
+        <div class="section-title">📝 Transcript</div>
+        <textarea class="textarea" id="transcriptText" placeholder="ข้อความถอดเสียงจะแสดงที่นี่"></textarea>
+        <div class="actions two">
+          <button class="btn secondary" id="downloadTranscriptBtn">⬇️ ดาวน์โหลด Transcript</button>
+          <button class="btn primary" id="summaryBtn">🤖 สรุปการประชุมด้วย AI →</button>
+        </div>
+      </div>
+      <div class="actions"><button class="btn secondary" id="newBtn">🎙️ บันทึกใหม่</button></div>
+    </div>
+
+    <div class="step" id="step5">
+      <div class="loading show" id="summaryLoading"><span class="spinner"></span>กำลังวิเคราะห์และสรุปการประชุม...</div>
+      <div id="summaryArea" class="hidden">
+        <div class="result-box"><strong>✅ AI สรุปการประชุมสำเร็จ</strong><br><span style="color:#64748b">กรุณาตรวจสอบความถูกต้องก่อนนำไปใช้เป็นรายงานทางการ</span></div>
+        <div class="summary-card"><h3>📌 สรุปภาพรวม</h3><p id="executiveSummary">-</p></div>
+        <div class="summary-card"><h3>🔎 ประเด็นสำคัญ</h3><ul id="keyPoints"></ul></div>
+        <div class="summary-card"><h3>✅ มติ / ข้อสรุป</h3><ul id="decisions"></ul></div>
+        <div class="summary-card"><h3>📋 งานที่ได้รับมอบหมาย</h3><div id="actionItems"></div></div>
+        <div class="summary-card"><h3>💬 บรรยากาศการประชุม</h3><p id="sentiment">-</p></div>
+        <div class="summary-card"><h3>📅 สิ่งที่ต้องติดตาม / ครั้งถัดไป</h3><p id="nextMeeting">-</p></div>
+        <div class="actions two">
+          <button class="btn success" id="downloadSummaryBtn">⬇️ ดาวน์โหลดสรุป</button>
+          <button class="btn secondary" id="backTranscriptBtn">← กลับไปแก้ Transcript</button>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="generateReportBtn">📄 สร้างรายงาน Google Docs + PDF</button>
+        </div>
+        <div id="reportStatus" class="cloud-status"></div>
+        <div class="actions"><a class="btn primary" href="index.html" style="text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center">🏠 เสร็จสิ้น / กลับหน้าหลัก</a></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  let currentStep=1, selectedMeeting=null, stream=null, recorder=null, chunks=[], audioBlob=null, audioUrl=null;
+  let startedAt=null, elapsedBeforePause=0, timerInterval=null, finalDuration=0, mimeType='', aiReady=false, summaryData=null;
+  let recordId=null, cloudAudioUrl='';
+  const stepNames=['','เลือกการประชุม','เตรียมไมโครโฟน','บันทึกเสียง','ถอดเสียง','สรุปด้วย AI'];
+
+  function showStep(n){currentStep=n;document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('active',i===n-1));document.getElementById('stepText').textContent=`ขั้นตอน ${n} จาก 5 : ${stepNames[n]}`;document.getElementById('percent').textContent=`${n*20}%`;document.getElementById('progressBar').style.width=`${n*20}%`;window.scrollTo({top:0,behavior:'smooth'});}
+  function escapeHtml(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+  function meetingIdOf(m){return m.meeting_id||m.id||''} function meetingTitleOf(m){return m.meeting_title||m.title||'การประชุม'} function meetingDateOf(m){return m.meeting_date||m.date||''} function meetingTimeOf(m){return [m.start_time||m.startTime||'',m.end_time||m.endTime||''].filter(Boolean).join(' - ')} function meetingPlaceOf(m){return m.location_name||m.room||''} function meetingAgendaOf(m){return m.meeting_description||m.agenda||''}
+
+  async function loadMeetings(){const box=document.getElementById('meetingList');try{const res=await apiFetch('getMeetings');const list=Array.isArray(res)?res:(Array.isArray(res.data)?res.data:(res.data&&Array.isArray(res.data.data)?res.data.data:[]));const usable=list.filter(m=>String(m.status||'').toUpperCase()!=='CANCELLED');if(!usable.length){box.innerHTML='<div class="empty">ไม่พบรายการประชุม</div>';return;}box.innerHTML=usable.map((m,i)=>`<button type="button" class="meeting-option" data-i="${i}"><div class="meeting-title">${escapeHtml(meetingTitleOf(m))}</div><div class="meeting-meta">📅 ${escapeHtml(meetingDateOf(m)||'-')} &nbsp; ⏰ ${escapeHtml(meetingTimeOf(m)||'-')}<br>📍 ${escapeHtml(meetingPlaceOf(m)||'-')}</div></button>`).join('');box.querySelectorAll('.meeting-option').forEach(btn=>btn.onclick=()=>{box.querySelectorAll('.meeting-option').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected');selectedMeeting=usable[Number(btn.dataset.i)];document.getElementById('toStep2').disabled=false;});}catch(e){box.innerHTML=`<div class="empty">โหลดรายการประชุมไม่สำเร็จ<br>${escapeHtml(e.message||e)}</div>`;}}
+
+  async function checkAI(){const el=document.getElementById('aiStatus');try{const r=await fetch('/api/ai/status');const j=await r.json();aiReady=!!j.configured;el.className='ai-status '+(aiReady?'ai-ok':'ai-bad');el.textContent=aiReady?`✅ Gemini AI พร้อมใช้งาน (${j.model||''})`:'⚠️ ยังไม่ได้ตั้งค่า Gemini API Key — บันทึกเสียงได้ แต่ยังถอดเสียงด้วย AI ไม่ได้';}catch{aiReady=false;el.className='ai-status ai-bad';el.textContent='⚠️ ยังตรวจสอบสถานะ AI ไม่สำเร็จ';}}
+  function chooseMime(){const c=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];return c.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';}
+  async function prepareMicrophone(){const btn=document.getElementById('prepareMic');btn.disabled=true;btn.textContent='กำลังตรวจสอบ...';try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('เบราว์เซอร์นี้ไม่รองรับไมโครโฟน');if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});document.getElementById('micTitle').textContent='✅ ไมโครโฟนพร้อมใช้งาน';document.getElementById('micText').textContent='พร้อมเริ่มบันทึกเสียง';document.getElementById('toStep3').disabled=false;btn.textContent='✅ ตรวจสอบไมโครโฟนแล้ว';}catch(e){btn.disabled=false;btn.textContent='🎤 ลองอีกครั้ง';document.getElementById('micTitle').textContent='❌ ไม่สามารถใช้ไมโครโฟนได้';document.getElementById('micText').textContent=e.name==='NotAllowedError'?'กรุณาอนุญาตไมโครโฟนในเบราว์เซอร์':(e.message||e);}}
+  function formatTime(ms){const sec=Math.max(0,Math.floor(ms/1000)),h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return [h,m,s].map(x=>String(x).padStart(2,'0')).join(':')} function currentElapsed(){if(!recorder)return elapsedBeforePause;if(recorder.state==='recording'&&startedAt)return elapsedBeforePause+(Date.now()-startedAt);return elapsedBeforePause} function updateTimer(){document.getElementById('timer').textContent=formatTime(currentElapsed())}
+  function startRecording(){try{chunks=[];audioBlob=null;finalDuration=0;elapsedBeforePause=0;mimeType=chooseMime();recorder=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data)};recorder.onstop=finishRecording;recorder.start(1000);startedAt=Date.now();timerInterval=setInterval(updateTimer,250);document.getElementById('recordingBox').classList.add('is-recording');document.getElementById('recordLabel').textContent='กำลังบันทึก';document.getElementById('recordState').textContent='กำลังบันทึกเสียงการประชุม...';document.getElementById('startBtn').disabled=true;document.getElementById('pauseBtn').disabled=false;document.getElementById('stopBtn').disabled=false;document.getElementById('back2').disabled=true;}catch(e){alert('เริ่มบันทึกไม่ได้: '+(e.message||e));}}
+  function togglePause(){if(!recorder)return;const btn=document.getElementById('pauseBtn');if(recorder.state==='recording'){elapsedBeforePause+=Date.now()-startedAt;startedAt=null;recorder.pause();btn.textContent='▶️ บันทึกต่อ';document.getElementById('recordState').textContent='หยุดชั่วคราว';document.getElementById('recordingBox').classList.remove('is-recording');}else if(recorder.state==='paused'){recorder.resume();startedAt=Date.now();btn.textContent='⏸ หยุดชั่วคราว';document.getElementById('recordState').textContent='กำลังบันทึกเสียงการประชุม...';document.getElementById('recordingBox').classList.add('is-recording');}}
+  function stopRecording(){if(!recorder||recorder.state==='inactive')return;if(recorder.state==='recording'&&startedAt){elapsedBeforePause+=Date.now()-startedAt;startedAt=null}finalDuration=elapsedBeforePause;clearInterval(timerInterval);updateTimer();recorder.stop();document.getElementById('stopBtn').disabled=true;document.getElementById('pauseBtn').disabled=true;}
+  function finishRecording(){document.getElementById('recordingBox').classList.remove('is-recording');const type=recorder.mimeType||mimeType||'audio/webm';audioBlob=new Blob(chunks,{type});if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(audioBlob);document.getElementById('audioPlayer').src=audioUrl;document.getElementById('reviewMeeting').textContent=meetingTitleOf(selectedMeeting);document.getElementById('reviewDuration').textContent=formatTime(finalDuration);document.getElementById('transcriptArea').classList.add('hidden');document.getElementById('transcriptText').value='';showStep(4);}
+  function fileExtension(){const t=(audioBlob?.type||mimeType||'').toLowerCase();if(t.includes('mp4'))return'm4a';if(t.includes('ogg'))return'ogg';return'webm'} function safeName(v){return String(v||'meeting').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'_').slice(0,80)} function downloadBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),500)} function saveAudio(){if(audioBlob)downloadBlob(audioBlob,`${safeName(meetingIdOf(selectedMeeting)||'meeting')}_${new Date().toISOString().replace(/[:.]/g,'-')}.${fileExtension()}`)}
+  function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
+  async function loadRecordsApiConfig(){
+    try{
+      const r=await fetch('/api/records/status',{credentials:'same-origin'});
+      const j=await r.json();
+      if(!r.ok||j.success!==true){
+        throw new Error(j.message||'Records Proxy ยังไม่พร้อม');
+      }
+      setCloudStatus('ok',`✅ ระบบจัดเก็บพร้อมใช้งาน | Records API ${j.version||''}`);
+    }catch(e){
+      setCloudStatus('error','❌ ระบบจัดเก็บยังไม่พร้อม: '+(e.message||e));
+    }
+  }
+
+  function setCloudStatus(type,message,html=false){
+    const el=document.getElementById('cloudStatus');
+    if(!el)return;
+    el.className=`cloud-status show ${type}`;
+    if(html)el.innerHTML=message;else el.textContent=message;
+  }
+
+  async function postRecordsApi(payload){
+    const response=await fetch('/api/records',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'same-origin',
+      body:JSON.stringify(payload)
+    });
+
+    const data=await response.json().catch(()=>({}));
+
+    if(!response.ok || data.success!==true){
+      if(response.status===401){
+        throw new Error('Session ผู้ดูแลหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+      }
+      throw new Error(data.message||data.error||`HTTP ${response.status}`);
+    }
+
+    return data;
+  }
+
+  function blobToBase64(blob){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>{
+        const value=String(r.result||'');
+        const comma=value.indexOf(',');
+        resolve(comma>=0?value.slice(comma+1):value);
+      };
+      r.onerror=()=>reject(r.error||new Error('อ่านไฟล์เสียงไม่สำเร็จ'));
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function rawAudioMime(){
+    return String(audioBlob?.type||mimeType||'audio/webm').split(';')[0].trim()||'audio/webm';
+  }
+
+  function currentAudioFileName(){
+    return `${safeName(meetingIdOf(selectedMeeting)||'meeting')}_${new Date().toISOString().replace(/[:.]/g,'-')}.${fileExtension()}`;
+  }
+
+  async function postRecordsApi(payload){
+    if(!recordsApiUrl){
+      if(!saveRecordsApiConfig())throw new Error('ยังไม่ได้ตั้งค่า Smart Meeting Records API URL');
+    }
+    const response=await fetch(recordsApiUrl,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      body:JSON.stringify(payload),
+      redirect:'follow'
+    });
+    const raw=await response.text();
+    let data={};
+    try{data=raw?JSON.parse(raw):{};}catch{
+      throw new Error(`Records API ตอบกลับไม่ใช่ JSON (HTTP ${response.status})`);
+    }
+    if(!response.ok || data.success!==true){
+      throw new Error(data.message||data.error||`HTTP ${response.status}`);
+    }
+    return data;
+  }
+
+  async function uploadAudioToDrive(options={}){
+    const silent=!!options.silent;
+    if(recordId && cloudAudioUrl){
+      if(!silent)setCloudStatus('ok',`✅ ไฟล์เสียงนี้บันทึกใน Google Drive แล้ว | record_id: ${recordId}`);
+      return {success:true,record_id:recordId,audio:{file_url:cloudAudioUrl},alreadyUploaded:true};
+    }
+    if(!audioBlob)throw new Error('ยังไม่มีไฟล์เสียงสำหรับอัปโหลด');
+    if(!selectedMeeting)throw new Error('ยังไม่ได้เลือกการประชุม');
+
+    const btn=document.getElementById('uploadDriveBtn');
+    if(btn){btn.disabled=true;btn.textContent='☁️ กำลังอัปโหลด...';}
+    if(!silent)setCloudStatus('info','☁️ กำลังอัปโหลดไฟล์เสียงเข้า Google Drive กรุณารอสักครู่...');
+
+    try{
+      const audioBase64=await blobToBase64(audioBlob);
+      const payload={
+        action:'uploadAudio',
+        meeting_id:meetingIdOf(selectedMeeting),
+        meeting_title:meetingTitleOf(selectedMeeting),
+        recorded_at:new Date().toISOString(),
+        duration_seconds:Math.max(0,Math.round(finalDuration/1000)),
+        mime_type:rawAudioMime(),
+        file_name:currentAudioFileName(),
+        audio_base64:audioBase64,
+        created_by:'Meeting Recorder'
+      };
+
+      const data=await postRecordsApi(payload);
+      recordId=String(data.record_id||'').trim();
+      cloudAudioUrl=String(data.audio?.file_url||'').trim();
+
+      const fileLink=cloudAudioUrl
+        ? ` <a href="${cloudAudioUrl}" target="_blank" rel="noopener">เปิดไฟล์ใน Google Drive ↗</a>`
+        : '';
+      setCloudStatus('ok',`✅ อัปโหลดสำเร็จ<br>record_id: <strong>${escapeHtml(recordId)}</strong>${fileLink}`,true);
+
+      if(btn)btn.textContent='✅ บันทึกใน Google Drive แล้ว';
+      return data;
+    }catch(e){
+      if(!silent)setCloudStatus('error','❌ อัปโหลดไม่สำเร็จ: '+(e.message||e));
+      throw e;
+    }finally{
+      if(btn && !recordId){
+        btn.disabled=false;
+        btn.textContent='☁️ บันทึกเสียงเข้า Google Drive';
+      }
+    }
+  }
+
+  async function updateCloudRecord(patch){
+    if(!recordId)return null;
+    try{
+      return await postRecordsApi({
+        action:'updateRecord',
+        record_id:recordId,
+        ...patch
+      });
+    }catch(e){
+      setCloudStatus('error','⚠️ AI ทำงานแล้ว แต่บันทึกผลกลับ MeetingRecords ไม่สำเร็จ: '+(e.message||e));
+      return null;
+    }
+  }
+
+  function setTranscribeStatus(type,message){const el=document.getElementById('transcribeStatus');el.className=`transcribe-status show ${type}`;el.textContent=message;}
+  function clearTranscribeStatus(){const el=document.getElementById('transcribeStatus');el.className='transcribe-status';el.textContent='';}
+
+  function writeString(view,offset,text){for(let i=0;i<text.length;i++)view.setUint8(offset+i,text.charCodeAt(i));}
+  function audioBufferToWavBlob(buffer){
+    const channels=buffer.numberOfChannels, length=buffer.length, sampleRate=buffer.sampleRate;
+    const mono=new Float32Array(length);
+    for(let c=0;c<channels;c++){const data=buffer.getChannelData(c);for(let i=0;i<length;i++)mono[i]+=data[i]/channels;}
+    const out=new ArrayBuffer(44+length*2), view=new DataView(out);
+    writeString(view,0,'RIFF');view.setUint32(4,36+length*2,true);writeString(view,8,'WAVE');writeString(view,12,'fmt ');
+    view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);
+    view.setUint32(28,sampleRate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);writeString(view,36,'data');view.setUint32(40,length*2,true);
+    let offset=44;for(let i=0;i<length;i++,offset+=2){let s=Math.max(-1,Math.min(1,mono[i]));view.setInt16(offset,s<0?s*0x8000:s*0x7fff,true);}
+    return new Blob([out],{type:'audio/wav'});
+  }
+
+  async function makeGeminiCompatibleAudio(blob){
+    const rawType=String(blob.type||'').toLowerCase();
+    const simpleType=rawType.split(';')[0].trim();
+    const supported=['audio/wav','audio/mp3','audio/mpeg','audio/aiff','audio/aac','audio/ogg','audio/flac'];
+    if(supported.includes(simpleType))return {blob,mimeType:simpleType,converted:false};
+    // Chrome มักบันทึกเป็น audio/webm;codecs=opus ซึ่ง Gemini Audio input ไม่รับโดยตรง
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    if(!AudioCtx)throw new Error('เบราว์เซอร์ไม่สามารถแปลงไฟล์เสียงเป็น WAV ได้');
+    const ctx=new AudioCtx();
+    try{
+      const arr=await blob.arrayBuffer();
+      const decoded=await ctx.decodeAudioData(arr.slice(0));
+      const wavBlob=audioBufferToWavBlob(decoded);
+      return {blob:wavBlob,mimeType:'audio/wav',converted:true};
+    }finally{try{await ctx.close();}catch{}}
+  }
+
+  async function transcribeAudio(){
+    if(!audioBlob)return;
+    const btn=document.getElementById('transcribeBtn'),loading=document.getElementById('transcribeLoading'),loadingText=document.getElementById('transcribeLoadingText');
+    clearTranscribeStatus();
+    document.getElementById('transcriptArea').classList.add('hidden');
+    if(!aiReady){setTranscribeStatus('error','❌ ยังไม่ได้ตั้งค่า Gemini API Key จึงยังถอดเสียงไม่ได้');return;}
+    btn.disabled=true;loading.classList.add('show');
+    try{
+      if(!recordId){
+        loadingText.textContent='กำลังสำรองไฟล์เสียงเข้า Google Drive ก่อนถอดเสียง...';
+        await uploadAudioToDrive({silent:true});
+      }
+    }catch(e){
+      btn.disabled=false;loading.classList.remove('show');
+      setCloudStatus('error','❌ ต้องบันทึกไฟล์เสียงเข้า Google Drive ก่อน: '+(e.message||e));
+      setTranscribeStatus('error','❌ ยังไม่เริ่มถอดเสียง เพราะการสำรองไฟล์เสียงไม่สำเร็จ');
+      return;
+    }
+    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);
+    try{
+      loadingText.textContent='กำลังเตรียมไฟล์เสียงสำหรับ Gemini...';
+      const prepared=await makeGeminiCompatibleAudio(audioBlob);
+      if(prepared.converted)setTranscribeStatus('info','🔄 แปลงไฟล์ WebM เป็น WAV แล้ว กำลังส่งให้ Gemini...');
+      const maxBytes=20*1024*1024;
+      if(prepared.blob.size>maxBytes)throw new Error(`ไฟล์หลังแปลงมีขนาด ${(prepared.blob.size/1024/1024).toFixed(1)} MB เกิน 20 MB กรุณาบันทึกช่วงสั้นลง`);
+      loadingText.textContent='กำลังถอดเสียงด้วย Gemini กรุณารอสักครู่...';
+      const audioData=await blobToDataURL(prepared.blob);
+      const context=`${meetingTitleOf(selectedMeeting)} | ${meetingDateOf(selectedMeeting)} | ${meetingTimeOf(selectedMeeting)} | ${meetingPlaceOf(selectedMeeting)}`;
+      const r=await fetch('/api/ai/transcribe-audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audioData,mimeType:prepared.mimeType,meetingContext:context,language:'th'}),signal:controller.signal});
+      const raw=await r.text();let j={};
+      try{j=raw?JSON.parse(raw):{};}catch{throw new Error(`เซิร์ฟเวอร์ตอบกลับไม่ใช่ JSON (HTTP ${r.status})`);}
+      if(!r.ok||j.success!==true)throw new Error(j.message||j.error||`HTTP ${r.status}`);
+      const transcript=String(j.transcript||'').trim();
+      if(!transcript)throw new Error('Gemini ตอบกลับมาแต่ไม่มีข้อความ Transcript');
+      document.getElementById('transcriptText').value=transcript;
+      await updateCloudRecord({transcript,status:'TRANSCRIBED'});
+      const area=document.getElementById('transcriptArea');area.classList.remove('hidden');
+      setTranscribeStatus('ok','✅ ถอดเสียงสำเร็จแล้ว กรุณาตรวจข้อความด้านล่างก่อนสรุปด้วย AI');
+      setTimeout(()=>area.scrollIntoView({behavior:'smooth',block:'start'}),100);
+    }catch(e){
+      const msg=e?.name==='AbortError'?'ใช้เวลาถอดเสียงเกิน 2 นาที กรุณาลองใหม่ด้วยไฟล์สั้นลง':(e.message||String(e));
+      setTranscribeStatus('error','❌ ถอดเสียงไม่สำเร็จ: '+msg);
+    }finally{clearTimeout(timeout);btn.disabled=false;loading.classList.remove('show');loadingText.textContent='กำลังถอดเสียง กรุณารอสักครู่...';}
+  }
+
+  async function summarize(){
+    const transcript=document.getElementById('transcriptText').value.trim();
+    if(!transcript){setTranscribeStatus('error','❌ ยังไม่มี Transcript สำหรับสรุป');return;}
+    showStep(5);
+    document.getElementById('summaryLoading').classList.add('show');
+    document.getElementById('summaryArea').classList.add('hidden');
+    try{
+      const attendees=[];
+      if(selectedMeeting.organizer)attendees.push(selectedMeeting.organizer);
+      const r=await fetch('/api/ai/summarize-meeting',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          meetingTitle:meetingTitleOf(selectedMeeting),
+          agenda:meetingAgendaOf(selectedMeeting),
+          transcript,
+          attendees,
+          language:'th',
+          tone:'Professional Meeting Minutes'
+        })
+      });
+      const j=await r.json();
+      if(!r.ok||j.success!==true)throw new Error(j.message||j.error||`HTTP ${r.status}`);
+      summaryData=j.summary||{};
+      renderSummary(summaryData);
+      document.getElementById('summaryArea').classList.remove('hidden');
+
+      const actionItems=Array.isArray(summaryData.actionItems)?summaryData.actionItems:[];
+      await updateCloudRecord({
+        transcript,
+        ai_summary:summaryAsText(),
+        decisions:Array.isArray(summaryData.decisions)?summaryData.decisions:[],
+        action_items:actionItems,
+        responsible_persons:actionItems.map(x=>x.assignee||'').filter(Boolean),
+        due_dates:actionItems.map(x=>x.deadline||'').filter(Boolean),
+        status:'AI_SUMMARIZED'
+      });
+    }catch(e){
+      setCloudStatus('error','❌ สรุปการประชุมไม่สำเร็จ: '+(e.message||e));
+      showStep(4);
+    }finally{
+      document.getElementById('summaryLoading').classList.remove('show');
+    }
+  }
+  function liHtml(items){const a=Array.isArray(items)?items:[];return a.length?a.map(x=>`<li>${escapeHtml(x)}</li>`).join(''):'<li>ไม่ระบุ</li>'}
+  function renderSummary(s){document.getElementById('executiveSummary').textContent=s.executiveSummary||'ไม่ระบุ';document.getElementById('keyPoints').innerHTML=liHtml(s.keyPoints);document.getElementById('decisions').innerHTML=liHtml(s.decisions);document.getElementById('sentiment').textContent=s.sentiment||'ไม่ระบุ';document.getElementById('nextMeeting').textContent=s.nextMeeting||'ไม่ระบุ';const a=Array.isArray(s.actionItems)?s.actionItems:[];document.getElementById('actionItems').innerHTML=a.length?`<table class="action-table"><thead><tr><th>งาน</th><th>ผู้รับผิดชอบ</th><th>กำหนด</th><th>ความสำคัญ</th></tr></thead><tbody>${a.map(x=>`<tr><td>${escapeHtml(x.task||'')}</td><td>${escapeHtml(x.assignee||'ไม่ระบุ')}</td><td>${escapeHtml(x.deadline||'ไม่ระบุ')}</td><td>${escapeHtml(x.priority||'ไม่ระบุ')}</td></tr>`).join('')}</tbody></table>`:'ไม่พบงานที่ได้รับมอบหมาย';}
+  function downloadText(text,name){downloadBlob(new Blob([text],{type:'text/plain;charset=utf-8'}),name)}
+  function setReportStatus(type,message,html=false){
+    const el=document.getElementById('reportStatus');
+    if(!el)return;
+    el.className=`cloud-status show ${type}`;
+    if(html)el.innerHTML=message;else el.textContent=message;
+  }
+
+  async function generateOfficialReport(){
+    if(!recordId){
+      setReportStatus('error','❌ ยังไม่มี record_id กรุณาบันทึกเสียงเข้า Google Drive และสรุปการประชุมก่อน');
+      return;
+    }
+
+    const btn=document.getElementById('generateReportBtn');
+    if(btn){btn.disabled=true;btn.textContent='📄 กำลังสร้างรายงาน...';}
+    setReportStatus('info','📄 กำลังรวมข้อมูล Meetings + Registrations + MeetingAttendance + MeetingRecords และสร้าง Google Docs/PDF...');
+
+    try{
+      const result=await postRecordsApi({
+        action:'generateReport',
+        record_id:recordId,
+        replace_existing:true
+      });
+
+      const docUrl=String(result.report?.doc_url||'');
+      const pdfUrl=String(result.report?.pdf_url||'');
+      const checkedIn=result.summary?.checked_in ?? '-';
+      const registered=result.summary?.registrations ?? '-';
+
+      const links=[
+        docUrl?`<a href="${docUrl}" target="_blank" rel="noopener">📝 เปิด Google Docs ↗</a>`:'',
+        pdfUrl?`<a href="${pdfUrl}" target="_blank" rel="noopener">📕 เปิด PDF ↗</a>`:''
+      ].filter(Boolean).join(' &nbsp; | &nbsp; ');
+
+      setReportStatus(
+        'ok',
+        `✅ สร้างรายงานสำเร็จ<br>ผู้ลงทะเบียน: <strong>${registered}</strong> | Check-in จริง: <strong>${checkedIn}</strong><br>${links}`,
+        true
+      );
+
+      if(btn)btn.textContent='✅ สร้างรายงานแล้ว / สร้างใหม่';
+    }catch(e){
+      setReportStatus('error','❌ สร้างรายงานไม่สำเร็จ: '+(e.message||e));
+      if(btn)btn.textContent='📄 สร้างรายงาน Google Docs + PDF';
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  }
+
+  function summaryAsText(){const s=summaryData||{},lines=[];lines.push(`รายงานสรุปการประชุม: ${meetingTitleOf(selectedMeeting)}`,'',`สรุปภาพรวม\n${s.executiveSummary||'ไม่ระบุ'}`,'','ประเด็นสำคัญ');(s.keyPoints||[]).forEach((x,i)=>lines.push(`${i+1}. ${x}`));lines.push('','มติ / ข้อสรุป');(s.decisions||[]).forEach((x,i)=>lines.push(`${i+1}. ${x}`));lines.push('','งานที่ได้รับมอบหมาย');(s.actionItems||[]).forEach((x,i)=>lines.push(`${i+1}. ${x.task||''} | ผู้รับผิดชอบ: ${x.assignee||'ไม่ระบุ'} | กำหนด: ${x.deadline||'ไม่ระบุ'} | Priority: ${x.priority||'ไม่ระบุ'}`));lines.push('','บรรยากาศการประชุม',s.sentiment||'ไม่ระบุ','','สิ่งที่ต้องติดตาม / ครั้งถัดไป',s.nextMeeting||'ไม่ระบุ');return lines.join('\n')}
+  function resetRecording(){clearTranscribeStatus();recordId=null;cloudAudioUrl='';const rs=document.getElementById('reportStatus');if(rs){rs.className='cloud-status';rs.textContent='';}setCloudStatus('info','ℹ️ พร้อมสำหรับการบันทึกครั้งใหม่');const ub=document.getElementById('uploadDriveBtn');if(ub){ub.disabled=false;ub.textContent='☁️ บันทึกเสียงเข้า Google Drive';}if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}audioBlob=null;chunks=[];elapsedBeforePause=0;finalDuration=0;recorder=null;document.getElementById('timer').textContent='00:00:00';document.getElementById('startBtn').disabled=false;document.getElementById('pauseBtn').disabled=true;document.getElementById('stopBtn').disabled=true;document.getElementById('back2').disabled=false;document.getElementById('recordLabel').textContent='พร้อมบันทึก';document.getElementById('recordState').textContent='กด “เริ่มบันทึก” เมื่อพร้อม';showStep(3)}
+
+  document.getElementById('toStep2').onclick=()=>showStep(2);document.getElementById('prepareMic').onclick=prepareMicrophone;document.getElementById('toStep3').onclick=()=>showStep(3);document.getElementById('back1').onclick=()=>showStep(1);document.getElementById('back2').onclick=()=>showStep(2);document.getElementById('startBtn').onclick=startRecording;document.getElementById('pauseBtn').onclick=togglePause;document.getElementById('stopBtn').onclick=stopRecording;document.getElementById('saveAudioBtn').onclick=saveAudio;document.getElementById('uploadDriveBtn').onclick=()=>uploadAudioToDrive().catch(()=>{});document.getElementById('transcribeBtn').onclick=transcribeAudio;document.getElementById('summaryBtn').onclick=summarize;document.getElementById('newBtn').onclick=resetRecording;document.getElementById('downloadTranscriptBtn').onclick=()=>downloadText(document.getElementById('transcriptText').value,`${safeName(meetingIdOf(selectedMeeting)||'meeting')}_transcript.txt`);document.getElementById('downloadSummaryBtn').onclick=()=>downloadText(summaryAsText(),`${safeName(meetingIdOf(selectedMeeting)||'meeting')}_summary.txt`);document.getElementById('generateReportBtn').onclick=generateOfficialReport;document.getElementById('backTranscriptBtn').onclick=()=>showStep(4);
+  window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(audioUrl)URL.revokeObjectURL(audioUrl)});
+  loadRecordsApiConfig();loadMeetings();checkAI();
+</script>
+</body>
+</html>

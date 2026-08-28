@@ -1,0 +1,12 @@
+{
+  "name": "ระบบบันทึกเวลาเข้างาน (Face & GPS Attendance)",
+  "description": "ระบบบริหารการประชุมอัจฉริยะ (Smart Meeting Suite) ออกแบบ UX สไตล์ Wizard เรียบง่าย ทีละขั้นตอน (One Screen = One Task) สำหรับเช็กอิน เช็กเอาต์ ลงทะเบียน ตรวจสอบสถานะส่วนตัว พร้อม Face Recognition & GPS และศูนย์จัดการสำหรับผู้ดูแลระบบ เชื่อมต่อ Google Sheets และ Gemini AI",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

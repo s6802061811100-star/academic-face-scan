@@ -1,0 +1,17 @@
+{
+  "name": "face-recognition-gps-attendance",
+  "version": "1.0.0",
+  "description": "Face recognition and GPS attendance system",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build step needed for static web app'"
+  },
+  "dependencies": {
+    "@google/genai": "^2.19.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

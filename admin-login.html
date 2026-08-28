@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบผู้ดูแล — Smart Meeting</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Sarabun',sans-serif;min-height:100vh;background:radial-gradient(circle at 75% 15%,#24204b 0,#0a0e18 65%,#05070c 100%);color:#f8fafc;display:flex;align-items:center;justify-content:center;padding:20px}
+    .wrap{width:min(440px,100%)}
+    .back{display:inline-flex;color:#94a3b8;text-decoration:none;margin-bottom:16px;font-weight:600}
+    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);border-radius:26px;padding:30px;box-shadow:0 24px 70px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+    .icon{width:70px;height:70px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(168,85,247,.25));border:1px solid rgba(165,180,252,.25);margin:0 auto 16px}
+    h1{text-align:center;font-size:1.65rem;margin-bottom:6px}.sub{text-align:center;color:#94a3b8;line-height:1.55;margin-bottom:24px}
+    label{display:block;font-size:.88rem;font-weight:700;color:#cbd5e1;margin:12px 0 7px}
+    input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:13px;padding:13px 14px;color:#fff;font-family:inherit;font-size:1rem;outline:none}
+    input:focus{border-color:#818cf8;box-shadow:0 0 0 3px rgba(99,102,241,.2)}
+    button{width:100%;margin-top:18px;border:0;border-radius:13px;padding:13px;font-family:inherit;font-size:1rem;font-weight:800;color:white;background:linear-gradient(135deg,#6366f1,#7c3aed);cursor:pointer}
+    button:disabled{opacity:.65;cursor:wait}
+    .msg{display:none;margin-top:14px;border-radius:12px;padding:11px 13px;font-size:.88rem;font-weight:700;line-height:1.5}
+    .msg.show{display:block}.error{background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.35);color:#fecaca}.info{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:#bfdbfe}
+    .note{margin-top:18px;color:#64748b;text-align:center;font-size:.78rem;line-height:1.45}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="index.html">← กลับหน้าหลัก</a>
+    <div class="card">
+      <div class="icon">🔐</div>
+      <h1>เข้าสู่ระบบผู้ดูแล</h1>
+      <p class="sub">ใช้สำหรับจัดการการประชุม อนุมัติผู้เข้าร่วม ลงทะเบียนใบหน้า และตั้งค่าระบบ</p>
+      <form id="loginForm">
+        <label for="username">ชื่อผู้ใช้</label>
+        <input id="username" name="username" autocomplete="username" required autofocus>
+        <label for="password">รหัสผ่าน</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button id="loginBtn" type="submit">🔓 เข้าสู่ระบบ Admin</button>
+      </form>
+      <div id="msg" class="msg"></div>
+      <div class="note">ระบบจะออกจากระบบอัตโนมัติเมื่อ Session หมดอายุ หรือเมื่อ Server เริ่มใหม่</div>
+    </div>
+  </div>
+<script>
+  const ADMIN_TOKEN_KEY='smartMeetingAdminToken';
+  const form=document.getElementById('loginForm');
+  const msg=document.getElementById('msg');
+  const btn=document.getElementById('loginBtn');
+  const params=new URLSearchParams(location.search);
+  const next=(params.get('next')||'admin.html').replace(/^\/+/,'').split('?')[0];
+
+  function show(type,text){
+    msg.className='msg show '+type;
+    msg.textContent=text;
+  }
+
+  function goAdmin(token){
+    const target=new URL(next,location.href);
+
+    if(token){
+      target.searchParams.set('admin_token',token);
+    }
+
+    location.replace(target.href);
+  }
+
+  async function checkExisting(){
+    const token=String(sessionStorage.getItem(ADMIN_TOKEN_KEY)||'').trim();
+    if(!token)return;
+
+    try{
+      const r=await fetch('/api/admin/session',{
+        headers:{'Authorization':'Bearer '+token},
+        credentials:'same-origin'
+      });
+      const j=await r.json();
+
+      if(j.authenticated){
+        goAdmin(token);
+      }else{
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      }
+    }catch{}
+  }
+
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    msg.className='msg';
+    btn.disabled=true;
+    btn.textContent='กำลังตรวจสอบ...';
+
+    try{
+      const r=await fetch('/api/admin/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body:JSON.stringify({
+          username:form.username.value.trim(),
+          password:form.password.value
+        })
+      });
+
+      let j={};
+      try{
+        j=await r.json();
+      }catch{
+        throw new Error('Server ตอบกลับไม่ถูกต้อง กรุณา Restart Preview');
+      }
+
+      if(!r.ok || j.success!==true){
+        throw new Error(j.message||'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      }
+
+      const token=String(j.token||'').trim();
+
+      if(!token){
+        throw new Error('Server Login ผ่าน แต่ไม่ได้ Session Token กรุณาใช้ server.js เวอร์ชัน V4.5');
+      }
+
+      sessionStorage.setItem(ADMIN_TOKEN_KEY,token);
+
+      show('info','✅ เข้าสู่ระบบสำเร็จ กำลังเปิดหน้าผู้ดูแล...');
+      setTimeout(()=>goAdmin(token),180);
+
+    }catch(err){
+      show('error','❌ '+(err.message||err));
+    }finally{
+      btn.disabled=false;
+      btn.textContent='🔓 เข้าสู่ระบบ Admin';
+    }
+  });
+
+  checkExisting();
+</script>
+</body>
+</html>

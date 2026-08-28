@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตรวจสอบสถานะของฉัน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/api-config.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-main: #f8fafc;
+      --card-bg: #ffffff;
+      --card-hover: #f1f5f9;
+      --card-border: #e2e8f0;
+      --primary: #4338ca;
+      --primary-hover: #3730a3;
+      --success: #059669;
+      --warning: #d97706;
+      --error: #dc2626;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      min-height: 100vh;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    .top-nav {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      color: var(--text-main);
+      background: var(--card-hover);
+      border-color: #cbd5e1;
+    }
+
+    .header-card {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header-icon {
+      font-size: 38px;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+
+    .header-title {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .header-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    /* Search Box */
+    .search-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      height: 48px;
+      background: #ffffff;
+      border: 1.5px solid var(--card-border);
+      border-radius: 12px;
+      padding: 0 16px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
+    }
+
+    .btn-search {
+      width: 100%;
+      height: 52px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(67, 56, 202, 0.3);
+    }
+
+    .btn-search:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(67, 56, 202, 0.35);
+    }
+
+    /* Results */
+    .results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .result-item {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .meeting-name {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-approved { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .badge-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .result-label {
+      color: var(--text-muted);
+    }
+
+    .result-val {
+      font-weight: 600;
+      color: var(--text-main);
+      text-align: right;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .loader {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #ffffff;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Nav -->
+    <div class="top-nav">
+      <a href="index.html" class="back-btn" id="btnBackHome">
+        <span>←</span>
+        <span>กลับหน้าหลัก</span>
+      </a>
+    </div>
+
+    <!-- Header -->
+    <div class="header-card">
+      <div class="header-icon">🔍</div>
+      <h1 class="header-title">ตรวจสอบสถานะของฉัน</h1>
+      <p class="header-desc">ค้นหาสถานะการลงทะเบียนและประวัติการเข้าร่วมประชุมของคุณ</p>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-card">
+      <form id="searchForm" onsubmit="handleSearch(event)">
+        <div class="form-group">
+          <label class="form-label" for="searchKeyword">รหัสบุคลากร หรือ ชื่อ-นามสกุล</label>
+          <input 
+            type="text" 
+            id="searchKeyword" 
+            class="input-field" 
+            placeholder="รหัสคำขอ / รหัสบุคลากร / ชื่อ / English name / อีเมล / เบอร์โทร" 
+            required
+            autocomplete="off"
+          />
+        </div>
+        <button type="submit" class="btn-search" id="btnSubmitSearch">
+          <span id="btnSearchText">ค้นหาข้อมูล</span>
+          <span id="btnSearchSpinner" class="loader" style="display: none;"></span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsArea" class="results-container"></div>
+  </div>
+
+  <script>
+    async function apiFetch(action, params = {}) {
+      const url = new URL('/api', window.location.origin);
+      url.searchParams.set('action', action);
+      Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
+      const res = await fetch(url.toString());
+
+      let data = {};
+      try { data = await res.json(); } catch {}
+
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      }
+
+      return data;
+    }
+
+    function formatThaiDate(dStr) {
+      if (!dStr) return '-';
+      try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return dStr;
+        const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+      } catch (e) {
+        return dStr;
+      }
+    }
+
+    function formatTime(tStr) {
+      if (!tStr) return '-';
+      try {
+        if (typeof tStr === 'string' && tStr.includes('T')) {
+          const d = new Date(tStr);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+        return tStr;
+      } catch (e) {
+        return tStr;
+      }
+    }
+
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+      const keyword = (document.getElementById('searchKeyword').value || '').trim().toLowerCase();
+      if (!keyword) return;
+
+      const btnText = document.getElementById('btnSearchText');
+      const btnSpinner = document.getElementById('btnSearchSpinner');
+      const resultsArea = document.getElementById('resultsArea');
+
+      btnText.style.display = 'none';
+      btnSpinner.style.display = 'inline-block';
+      resultsArea.innerHTML = '<div class="empty-state">กำลังค้นหาข้อมูล...</div>';
+
+      try {
+        const [regs, meetings, attendances] = await Promise.all([
+          apiFetch('getRegistrations').catch(() => []),
+          apiFetch('getMeetings').catch(() => []),
+          apiFetch('getMeetingAttendance').catch(() => [])
+        ]);
+
+        const regList = Array.isArray(regs) ? regs : (regs.data || []);
+        const mtgList = Array.isArray(meetings) ? meetings : (meetings.data || []);
+        const attList = Array.isArray(attendances) ? attendances : (attendances.data || []);
+
+        const mtgMap = {};
+        mtgList.forEach(m => {
+          mtgMap[m.meeting_id] = m;
+        });
+
+        // Filter matched registrations
+        const myRegs = regList.filter(r => {
+          const values = [
+            r.registration_id,
+            r.employee_code,
+            r.fullname,
+            r.fullname_en,
+            r.email,
+            r.phone,
+            r.organization,
+            r.department,
+            r.affiliation
+          ]
+            .filter(Boolean)
+            .map(v => String(v).toLowerCase());
+
+          return values.some(v => v.includes(keyword));
+        });
+
+        const matchedRegIds = new Set(
+          myRegs.map(r => String(r.registration_id || '').trim()).filter(Boolean)
+        );
+
+        // External attendees can be linked by registration_id even when the
+        // search keyword was email / English name / phone.
+        const myAtts = attList.filter(a => {
+          const values = [
+            a.registration_id,
+            a.employee_code,
+            a.fullname,
+            a.fullname_en
+          ]
+            .filter(Boolean)
+            .map(v => String(v).toLowerCase());
+
+          return (
+            values.some(v => v.includes(keyword)) ||
+            (a.registration_id && matchedRegIds.has(String(a.registration_id).trim()))
+          );
+        });
+
+        if (myRegs.length === 0 && myAtts.length === 0) {
+          resultsArea.innerHTML = `
+            <div class="result-item empty-state">
+              <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
+              <div>ไม่พบข้อมูลการลงทะเบียนหรือการเข้าร่วมประชุม</div>
+              <div style="font-size: 0.85rem; margin-top: 4px; color: var(--text-muted);">กรุณาตรวจสอบรหัสบุคลากร หรือ ชื่อ-นามสกุล อีกครั้ง</div>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+
+        // Combine unique meetings for the user
+        const meetingIds = new Set([
+          ...myRegs.map(r => r.meeting_id),
+          ...myAtts.map(a => a.meeting_id)
+        ]);
+
+        meetingIds.forEach(mId => {
+          const mtg = mtgMap[mId] || { meeting_title: 'การประชุม (รหัส: ' + mId + ')' };
+          const reg = myRegs.find(r => r.meeting_id === mId);
+          const att = myAtts.find(a => a.meeting_id === mId);
+
+          let regBadge = '';
+          if (reg) {
+            const regStatus = String(reg.approval_status || reg.status || 'PENDING').toUpperCase();
+
+            if (regStatus === 'APPROVED') {
+              regBadge = '<span class="badge badge-approved">✅ ได้รับอนุมัติ</span>';
+            } else if (regStatus === 'REJECTED') {
+              regBadge = '<span class="badge badge-rejected">❌ ไม่อนุมัติ</span>';
+            } else if (regStatus === 'CANCELLED') {
+              regBadge = '<span class="badge badge-rejected">🚫 ยกเลิก</span>';
+            } else {
+              regBadge = '<span class="badge badge-pending">⏳ รอการอนุมัติ</span>';
+            }
+          }
+
+          let attStatusText = 'ยังไม่ได้เช็กอิน';
+          if (att) {
+            if (att.attendance_status === 'ON_TIME') {
+              attStatusText = '🟢 ตรงเวลา';
+            } else if (att.attendance_status === 'LATE') {
+              attStatusText = '🟡 มาสาย';
+            } else if (att.attendance_status === 'LATE_CRITICAL') {
+              attStatusText = '🔴 สายเกินเกณฑ์';
+            } else if (att.attendance_status === 'COMPLETED') {
+              attStatusText = '🟢 เข้าร่วมสมบูรณ์';
+            } else if (att.attendance_status === 'EARLY_LEAVE') {
+              attStatusText = '🟠 ออกก่อนเวลา';
+            } else {
+              attStatusText = '✅ บันทึกเวลาแล้ว';
+            }
+          }
+
+          html += `
+            <div class="result-item">
+              <div class="result-header">
+                <div>
+                  <h3 class="meeting-name">${mtg.meeting_title || 'การประชุม'}</h3>
+                  <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                    📅 ${formatThaiDate(mtg.meeting_date)}
+                  </div>
+                </div>
+                ${regBadge}
+              </div>
+
+              ${reg ? `
+                <div class="result-row">
+                  <span class="result-label">ผู้ลงทะเบียน</span>
+                  <span class="result-val">
+                    ${reg.fullname || '-'} ${reg.employee_code ? `(${reg.employee_code})` : ''}
+                    ${reg.fullname_en ? `<div style="font-size:.82rem;color:var(--text-muted);margin-top:3px;">${reg.fullname_en}</div>` : ''}
+                  </span>
+                </div>
+              ` : ''}
+
+              <div class="result-row">
+                <span class="result-label">สถานะการเข้าร่วม</span>
+                <span class="result-val">${attStatusText}</span>
+              </div>
+
+              ${att && att.checkin_time ? `
+                <div class="result-row">
+                  <span class="result-label">เวลาเช็กอิน</span>
+                  <span class="result-val">${formatTime(att.checkin_time)}</span>
+                </div>
+              ` : ''}
+
+              ${att && att.checkout_time ? `
+                <div class="result-row">
+                  <span class="result-label">เวลาเช็กเอาต์</span>
+                  <span class="result-val">${formatTime(att.checkout_time)}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        });
+
+        resultsArea.innerHTML = html;
+
+      } catch (err) {
+        resultsArea.innerHTML = `
+          <div class="result-item empty-state" style="color: var(--error);">
+            เกิดข้อผิดพลาดในการค้นหา: ${err.message}
+          </div>
+        `;
+      } finally {
+        btnText.style.display = 'inline-block';
+        btnSpinner.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
