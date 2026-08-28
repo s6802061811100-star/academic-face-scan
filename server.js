@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 10000;
 
 // Enable CORS and body parsers
 app.disable('x-powered-by');
@@ -33,11 +33,10 @@ app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // -------------------------------------------------------------
-// ADMIN LOGIN FIX V4.5 / Robust Cookie + Bearer + Query Session Fallback
-// Default credentials requested for this project:
-// username: admin
-// password: 1234
-// For production, set ADMIN_USERNAME / ADMIN_PASSWORD as Secrets.
+// ADMIN SESSION PRODUCTION FIX V4.18
+// Stateless HMAC-signed session token.
+// Session remains valid after Render sleep/restart/deploy as long as
+// ADMIN_SESSION_SECRET stays the same.
 // -------------------------------------------------------------
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'admin').trim();
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '1234').trim();
@@ -53,9 +52,23 @@ const MEETING_RECORDS_API_URL = String(
 const MEETING_RECORDS_API_TOKEN = String(
   process.env.MEETING_RECORDS_API_TOKEN || ''
 ).trim();
+
 const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000; // 8 hours
 const ADMIN_COOKIE = 'sm_admin_session';
-const adminSessions = new Map();
+
+// Recommended: set ADMIN_SESSION_SECRET in Render.
+// Fallback is deterministic so existing production still works,
+// but a generated random secret is safer.
+const ADMIN_SESSION_SECRET = String(
+  process.env.ADMIN_SESSION_SECRET ||
+  crypto
+    .createHash('sha256')
+    .update(
+      `SACMS|${ADMIN_USERNAME}|${ADMIN_PASSWORD}|production-session-v4.18`
+    )
+    .digest('hex')
+).trim();
+
 const adminFailures = new Map();
 
 const ADMIN_PROTECTED_PAGES = new Set([
@@ -91,38 +104,51 @@ const ADMIN_GET_ACTIONS = new Set([
 function parseCookies(req) {
   const out = {};
   const raw = String(req.headers.cookie || '');
+
   raw.split(';').forEach(part => {
     const idx = part.indexOf('=');
     if (idx <= 0) return;
+
     const key = part.slice(0, idx).trim();
     const value = part.slice(idx + 1).trim();
-    try { out[key] = decodeURIComponent(value); } catch { out[key] = value; }
+
+    try {
+      out[key] = decodeURIComponent(value);
+    } catch {
+      out[key] = value;
+    }
   });
+
   return out;
 }
 
 function extractAdminToken(req) {
-  // 1) Cookie (normal browser deployment)
+  // 1) Cookie — normal production browser.
   const cookieToken = parseCookies(req)[ADMIN_COOKIE];
   if (cookieToken) return cookieToken;
 
-  // 2) Authorization: Bearer <token>
-  // Required as a reliable fallback in Google AI Studio Preview.
+  // 2) Authorization Bearer — existing Admin pages / AI Studio Preview.
   const auth = String(req.headers.authorization || '');
   const bearer = auth.match(/^Bearer\s+(.+)$/i);
-  if (bearer && bearer[1]) return bearer[1].trim();
 
-  // 3) Query parameter on protected admin pages.
+  if (bearer && bearer[1]) {
+    return bearer[1].trim();
+  }
+
+  // 3) Query parameter — retained for compatibility with existing pages.
   const queryToken = String(req.query?.admin_token || '').trim();
   if (queryToken) return queryToken;
 
-  // 4) Same-origin Referer.
-  // Admin sub-pages inherit the temporary token via Referer.
+  // 4) Same-origin Referer fallback.
   const ref = String(req.headers.referer || '');
+
   if (ref) {
     try {
       const u = new URL(ref);
-      const refToken = String(u.searchParams.get('admin_token') || '').trim();
+      const refToken = String(
+        u.searchParams.get('admin_token') || ''
+      ).trim();
+
       if (refToken) return refToken;
     } catch {}
   }
@@ -130,19 +156,122 @@ function extractAdminToken(req) {
   return '';
 }
 
+function base64UrlEncode(value) {
+  return Buffer
+    .from(String(value), 'utf8')
+    .toString('base64url');
+}
+
+function base64UrlDecode(value) {
+  return Buffer
+    .from(String(value), 'base64url')
+    .toString('utf8');
+}
+
+function signAdminPayload(encodedPayload) {
+  return crypto
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .update(encodedPayload)
+    .digest('base64url');
+}
+
+function createAdminSessionToken(username) {
+  const now = Date.now();
+
+  const payload = {
+    v: 1,
+    username,
+    createdAt: now,
+    expiresAt: now + ADMIN_SESSION_MS,
+    nonce: crypto.randomBytes(8).toString('hex')
+  };
+
+  const encodedPayload = base64UrlEncode(
+    JSON.stringify(payload)
+  );
+
+  const signature = signAdminPayload(encodedPayload);
+
+  return `${encodedPayload}.${signature}`;
+}
+
+function verifyAdminSessionToken(token) {
+  try {
+    const text = String(token || '').trim();
+    const parts = text.split('.');
+
+    if (parts.length !== 2) {
+      return null;
+    }
+
+    const [encodedPayload, suppliedSignature] = parts;
+
+    const expectedSignature =
+      signAdminPayload(encodedPayload);
+
+    const a = Buffer.from(
+      suppliedSignature,
+      'utf8'
+    );
+
+    const b = Buffer.from(
+      expectedSignature,
+      'utf8'
+    );
+
+    if (
+      a.length !== b.length ||
+      !crypto.timingSafeEqual(a, b)
+    ) {
+      return null;
+    }
+
+    const payload = JSON.parse(
+      base64UrlDecode(encodedPayload)
+    );
+
+    if (
+      !payload ||
+      payload.v !== 1 ||
+      payload.username !== ADMIN_USERNAME
+    ) {
+      return null;
+    }
+
+    if (
+      !Number.isFinite(Number(payload.expiresAt)) ||
+      Number(payload.expiresAt) <= Date.now()
+    ) {
+      return null;
+    }
+
+    return payload;
+
+  } catch {
+    return null;
+  }
+}
+
 function getAdminSession(req) {
   const token = extractAdminToken(req);
-  if (!token) return null;
 
-  const session = adminSessions.get(token);
-  if (!session) return null;
-
-  if (session.expiresAt <= Date.now()) {
-    adminSessions.delete(token);
+  if (!token) {
     return null;
   }
 
-  return { token, ...session };
+  const payload =
+    verifyAdminSessionToken(token);
+
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    token,
+    username: payload.username,
+    createdAt: Number(payload.createdAt || 0),
+    expiresAt: Number(payload.expiresAt || 0)
+  };
 }
 
 function isAdminAuthenticated(req) {
@@ -150,9 +279,15 @@ function isAdminAuthenticated(req) {
 }
 
 function setAdminCookie(req, res, token) {
-  const forwardedProto = String(req.headers['x-forwarded-proto'] || '');
-  const isHttps = req.secure || forwardedProto.includes('https');
-  const secure = isHttps ? '; Secure' : '';
+  const forwardedProto =
+    String(req.headers['x-forwarded-proto'] || '');
+
+  const isHttps =
+    req.secure ||
+    forwardedProto.includes('https');
+
+  const secure =
+    isHttps ? '; Secure' : '';
 
   res.setHeader(
     'Set-Cookie',
@@ -161,9 +296,15 @@ function setAdminCookie(req, res, token) {
 }
 
 function clearAdminCookie(req, res) {
-  const forwardedProto = String(req.headers['x-forwarded-proto'] || '');
-  const isHttps = req.secure || forwardedProto.includes('https');
-  const secure = isHttps ? '; Secure' : '';
+  const forwardedProto =
+    String(req.headers['x-forwarded-proto'] || '');
+
+  const isHttps =
+    req.secure ||
+    forwardedProto.includes('https');
+
+  const secure =
+    isHttps ? '; Secure' : '';
 
   res.setHeader(
     'Set-Cookie',
@@ -174,7 +315,11 @@ function clearAdminCookie(req, res) {
 function safeTextEqual(a, b) {
   const aa = Buffer.from(String(a));
   const bb = Buffer.from(String(b));
-  if (aa.length !== bb.length) return false;
+
+  if (aa.length !== bb.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(aa, bb);
 }
 
@@ -189,7 +334,13 @@ function clientKey(req) {
 function registerFailedLogin(req) {
   const key = clientKey(req);
   const now = Date.now();
-  const state = adminFailures.get(key) || { count: 0, firstAt: now, lockedUntil: 0 };
+
+  const state =
+    adminFailures.get(key) || {
+      count: 0,
+      firstAt: now,
+      lockedUntil: 0
+    };
 
   if (now - state.firstAt > 10 * 60 * 1000) {
     state.count = 0;
@@ -200,28 +351,41 @@ function registerFailedLogin(req) {
   state.count += 1;
 
   if (state.count >= 5) {
-    state.lockedUntil = now + 5 * 60 * 1000;
+    state.lockedUntil =
+      now + 5 * 60 * 1000;
   }
 
   adminFailures.set(key, state);
+
   return state;
 }
 
 function checkLoginLock(req) {
-  const state = adminFailures.get(clientKey(req));
-  if (!state) return 0;
+  const state =
+    adminFailures.get(clientKey(req));
 
-  const remaining = state.lockedUntil - Date.now();
-  return remaining > 0 ? remaining : 0;
+  if (!state) {
+    return 0;
+  }
+
+  const remaining =
+    state.lockedUntil - Date.now();
+
+  return remaining > 0
+    ? remaining
+    : 0;
 }
 
 function requireAdminApi(req, res) {
-  if (isAdminAuthenticated(req)) return true;
+  if (isAdminAuthenticated(req)) {
+    return true;
+  }
 
   res.status(401).json({
     success: false,
     code: 'ADMIN_LOGIN_REQUIRED',
-    message: 'กรุณาเข้าสู่ระบบผู้ดูแลก่อนดำเนินการ'
+    message:
+      'กรุณาเข้าสู่ระบบผู้ดูแลก่อนดำเนินการ'
   });
 
   return false;
@@ -229,117 +393,180 @@ function requireAdminApi(req, res) {
 
 // Custom login API
 app.post('/api/admin/login', (req, res) => {
-  const lockedMs = checkLoginLock(req);
+  const lockedMs =
+    checkLoginLock(req);
 
   if (lockedMs > 0) {
     return res.status(429).json({
       success: false,
-      message: `ใส่รหัสผิดหลายครั้ง กรุณารอประมาณ ${Math.ceil(lockedMs / 60000)} นาที`
+      message:
+        `ใส่รหัสผิดหลายครั้ง กรุณารอประมาณ ${Math.ceil(lockedMs / 60000)} นาที`
     });
   }
 
-  const username = String(req.body?.username || '');
-  const password = String(req.body?.password || '');
+  const username =
+    String(req.body?.username || '');
 
-  const ok = safeTextEqual(username, ADMIN_USERNAME) &&
-    safeTextEqual(password, ADMIN_PASSWORD);
+  const password =
+    String(req.body?.password || '');
+
+  const ok =
+    safeTextEqual(
+      username,
+      ADMIN_USERNAME
+    ) &&
+    safeTextEqual(
+      password,
+      ADMIN_PASSWORD
+    );
 
   if (!ok) {
-    const state = registerFailedLogin(req);
+    const state =
+      registerFailedLogin(req);
 
     return res.status(401).json({
       success: false,
-      message: state.lockedUntil > Date.now()
-        ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง ระบบล็อกชั่วคราว 5 นาที'
-        : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'
+      message:
+        state.lockedUntil > Date.now()
+          ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง ระบบล็อกชั่วคราว 5 นาที'
+          : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'
     });
   }
 
-  adminFailures.delete(clientKey(req));
+  adminFailures.delete(
+    clientKey(req)
+  );
 
-  const token = crypto.randomBytes(32).toString('hex');
-  adminSessions.set(token, {
-    username: ADMIN_USERNAME,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + ADMIN_SESSION_MS
-  });
+  const token =
+    createAdminSessionToken(
+      ADMIN_USERNAME
+    );
 
-  setAdminCookie(req, res, token);
+  setAdminCookie(
+    req,
+    res,
+    token
+  );
 
   return res.json({
     success: true,
     username: ADMIN_USERNAME,
     token,
-    previewTokenAllowed: true,
-    expiresInMinutes: Math.round(ADMIN_SESSION_MS / 60000)
+    previewTokenAllowed:
+      ALLOW_PREVIEW_ADMIN_TOKEN,
+    sessionMode:
+      'STATELESS_SIGNED',
+    expiresInMinutes:
+      Math.round(
+        ADMIN_SESSION_MS / 60000
+      )
   });
 });
 
 app.get('/api/admin/auth-status', (req, res) => {
   return res.json({
     success: true,
-    usernameConfigured: Boolean(ADMIN_USERNAME),
-    passwordConfigured: Boolean(ADMIN_PASSWORD),
-    previewFallbackEnabled: true,
-    sessionMinutes: Math.round(ADMIN_SESSION_MS / 60000)
+    usernameConfigured:
+      Boolean(ADMIN_USERNAME),
+    passwordConfigured:
+      Boolean(ADMIN_PASSWORD),
+    previewFallbackEnabled:
+      ALLOW_PREVIEW_ADMIN_TOKEN,
+    sessionMode:
+      'STATELESS_SIGNED',
+    sessionMinutes:
+      Math.round(
+        ADMIN_SESSION_MS / 60000
+      )
   });
 });
 
 app.get('/api/admin/session', (req, res) => {
-  const session = getAdminSession(req);
+  const session =
+    getAdminSession(req);
 
   return res.json({
     success: true,
-    authenticated: Boolean(session),
-    username: session?.username || null
+    authenticated:
+      Boolean(session),
+    username:
+      session?.username || null,
+    sessionMode:
+      'STATELESS_SIGNED',
+    expiresAt:
+      session?.expiresAt || null
   });
 });
 
 app.post('/api/admin/logout', (req, res) => {
-  const session = getAdminSession(req);
-
-  if (session?.token) {
-    adminSessions.delete(session.token);
-  }
-
+  // Stateless sessions do not need a server-side Map.
+  // Clearing the browser cookie/sessionStorage is sufficient for normal use.
   clearAdminCookie(req, res);
 
   return res.json({
     success: true,
-    message: 'ออกจากระบบเรียบร้อย'
+    message:
+      'ออกจากระบบเรียบร้อย'
   });
 });
 
 // Protect admin HTML pages even if someone types the URL directly.
 app.use((req, res, next) => {
-  if (req.method !== 'GET') return next();
+  if (req.method !== 'GET') {
+    return next();
+  }
 
-  const pathname = String(req.path || '').toLowerCase();
+  const pathname =
+    String(req.path || '').toLowerCase();
 
   if (!ADMIN_PROTECTED_PAGES.has(pathname)) {
     return next();
   }
 
-  const session = getAdminSession(req);
+  const session =
+    getAdminSession(req);
 
   if (session) {
-    const currentToken = String(req.query?.admin_token || '').trim();
+    const currentToken =
+      String(
+        req.query?.admin_token || ''
+      ).trim();
 
+    // Keep compatibility with the current Admin HTML pages.
     if (!currentToken) {
-      const qs = new URLSearchParams(req.query || {});
-      qs.set('admin_token', session.token);
-      const suffix = qs.toString() ? `?${qs.toString()}` : '';
-      return res.redirect(`${pathname}${suffix}`);
+      const qs =
+        new URLSearchParams(
+          req.query || {}
+        );
+
+      qs.set(
+        'admin_token',
+        session.token
+      );
+
+      const suffix =
+        qs.toString()
+          ? `?${qs.toString()}`
+          : '';
+
+      return res.redirect(
+        `${pathname}${suffix}`
+      );
     }
 
     return next();
   }
 
-  const nextUrl = encodeURIComponent(pathname.replace(/^\//, '') || 'admin.html');
-  return res.redirect(`/admin-login.html?next=${nextUrl}`);
+  const nextUrl =
+    encodeURIComponent(
+      pathname.replace(/^\//, '') ||
+      'admin.html'
+    );
+
+  return res.redirect(
+    `/admin-login.html?next=${nextUrl}`
+  );
 });
-
-
 
 
 // -------------------------------------------------------------
