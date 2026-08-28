@@ -1013,6 +1013,94 @@
     let currentFilter = 'all';
     let currentRegStatusFilter = 'ALL';
 
+
+    // =========================================================
+    // API HELPER — PRODUCTION FIX V4.17
+    // =========================================================
+    async function apiFetch(action, data = {}, method = 'GET') {
+      const httpMethod = String(method || 'GET').toUpperCase();
+      const url = new URL('/api', window.location.origin);
+      url.searchParams.set('action', action);
+
+      const options = {
+        method: httpMethod,
+        credentials: 'same-origin'
+      };
+
+      // In Google AI Studio Preview, admin_token may be present in the page URL.
+      // In Render Production, the HttpOnly admin session cookie is sent automatically.
+      const pageParams = new URLSearchParams(window.location.search);
+      const adminToken = pageParams.get('admin_token');
+
+      if (httpMethod === 'GET') {
+        Object.entries(data || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            url.searchParams.set(key, String(value));
+          }
+        });
+
+        if (adminToken) {
+          url.searchParams.set('admin_token', adminToken);
+        }
+
+      } else {
+        options.headers = {
+          'Content-Type': 'application/json'
+        };
+
+        if (adminToken) {
+          options.headers.Authorization = `Bearer ${adminToken}`;
+        }
+
+        options.body = JSON.stringify({
+          action,
+          ...(data || {})
+        });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      options.signal = controller.signal;
+
+      try {
+        const response = await fetch(url.toString(), options);
+
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error(
+              payload?.message ||
+              'Session ผู้ดูแลหมดอายุ กรุณาเข้าสู่ระบบ Admin ใหม่'
+            );
+          }
+
+          throw new Error(
+            payload?.message ||
+            payload?.error ||
+            `Server ตอบกลับ HTTP ${response.status}`
+          );
+        }
+
+        return payload;
+
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          throw new Error('Server ใช้เวลาตอบกลับนานเกิน 25 วินาที กรุณาลองใหม่');
+        }
+
+        throw error;
+
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
     // View Switcher
     function switchMainView(mode, targetMeetingId = null) {
       const secM = document.getElementById('sectionMeetingsView');
