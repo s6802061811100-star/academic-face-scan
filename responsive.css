@@ -1,0 +1,176 @@
+/* =========================================================
+   SACMS GLOBAL RESPONSIVE CSS
+   Mobile / Tablet / Desktop
+   ========================================================= */
+
+:root {
+  --font-body: clamp(14px, 0.4vw + 13px, 16px);
+  --font-h1: clamp(22px, 3vw, 36px);
+  --font-h2: clamp(19px, 2.3vw, 28px);
+  --font-h3: clamp(16px, 1.8vw, 21px);
+  --font-small: clamp(12px, 1vw, 14px);
+
+  --page-padding: clamp(12px, 2vw, 24px);
+  --card-padding: clamp(14px, 2vw, 24px);
+}
+
+/* ป้องกันมือถือขยาย Font เอง */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  font-size: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-size: var(--font-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ===============================
+   TYPOGRAPHY
+   =============================== */
+
+h1,
+.page-title,
+.system-title {
+  font-size: var(--font-h1) !important;
+  line-height: 1.25;
+}
+
+h2,
+.section-title {
+  font-size: var(--font-h2) !important;
+  line-height: 1.3;
+}
+
+h3,
+.card-title {
+  font-size: var(--font-h3) !important;
+  line-height: 1.35;
+}
+
+p,
+label,
+li,
+td,
+th {
+  line-height: 1.6;
+}
+
+small,
+.helper-text,
+.caption,
+.status-text {
+  font-size: var(--font-small) !important;
+}
+
+/* ===============================
+   FORM
+   =============================== */
+
+/* 16px สำคัญสำหรับ iPhone
+   ป้องกัน Safari Zoom ตอนแตะช่องกรอก */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+  max-width: 100%;
+}
+
+button,
+.btn {
+  font-size: clamp(14px, 1vw, 16px) !important;
+  min-height: 44px;
+}
+
+/* ===============================
+   RESPONSIVE MEDIA
+   =============================== */
+
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Container กลาง */
+.container,
+.page-container,
+.main-container {
+  width: min(100% - 24px, 1200px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===============================
+   MOBILE
+   =============================== */
+
+@media (max-width: 600px) {
+
+  body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .container,
+  .page-container,
+  .main-container {
+    width: calc(100% - 20px);
+  }
+
+  .card,
+  .panel,
+  .box {
+    padding: 14px;
+  }
+
+  button,
+  .btn {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  /* เมนูหรือ Dashboard ที่เป็น Grid
+     ให้เรียงบนลงล่างบนมือถือ */
+  .menu-grid,
+  .cards-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+}
+
+/* ===============================
+   TABLET
+   =============================== */
+
+@media (min-width: 601px) and (max-width: 1024px) {
+
+  .container,
+  .page-container,
+  .main-container {
+    width: calc(100% - 32px);
+  }
+
+}
+
+/* ===============================
+   LARGE DESKTOP
+   =============================== */
+
+@media (min-width: 1400px) {
+
+  .container,
+  .page-container,
+  .main-container {
+    max-width: 1200px;
+  }
+
+}
