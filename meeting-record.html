@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บันทึกการประชุม & AI</title>
+  <!-- SACMS Production Fix V4.19 -->
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="js/api-config.js"></script>
   <style>
@@ -150,6 +151,72 @@
   let startedAt=null, elapsedBeforePause=0, timerInterval=null, finalDuration=0, mimeType='', aiReady=false, summaryData=null;
   let recordId=null, cloudAudioUrl='';
   const stepNames=['','เลือกการประชุม','เตรียมไมโครโฟน','บันทึกเสียง','ถอดเสียง','สรุปด้วย AI'];
+
+  // =========================================================
+  // SACMS PRODUCTION API HELPER FALLBACK V4.19
+  // ใช้เมื่อ js/api-config.js โหลดไม่สำเร็จหรือไม่มีไฟล์บน Production
+  // =========================================================
+  if (typeof window.apiFetch !== 'function') {
+    window.apiFetch = async function(action, data = {}, method = 'GET') {
+      const httpMethod = String(method || 'GET').toUpperCase();
+      const url = new URL('/api', window.location.origin);
+      url.searchParams.set('action', action);
+
+      const options = {
+        method: httpMethod,
+        credentials: 'same-origin'
+      };
+
+      if (httpMethod === 'GET') {
+        Object.entries(data || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            url.searchParams.set(key, String(value));
+          }
+        });
+      } else {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify({
+          action,
+          ...(data || {})
+        });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      options.signal = controller.signal;
+
+      try {
+        const response = await fetch(url.toString(), options);
+
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ||
+            payload?.error ||
+            `Server ตอบกลับ HTTP ${response.status}`
+          );
+        }
+
+        return payload;
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          throw new Error(
+            'Server ใช้เวลาตอบกลับนานเกิน 25 วินาที กรุณาลองใหม่'
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+  }
+
 
   function showStep(n){currentStep=n;document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('active',i===n-1));document.getElementById('stepText').textContent=`ขั้นตอน ${n} จาก 5 : ${stepNames[n]}`;document.getElementById('percent').textContent=`${n*20}%`;document.getElementById('progressBar').style.width=`${n*20}%`;window.scrollTo({top:0,behavior:'smooth'});}
   function escapeHtml(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
