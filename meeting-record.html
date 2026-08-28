@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>บันทึกการประชุม & AI</title>
-  <!-- SACMS Production Fix V4.19 -->
+  <!-- SACMS Production Fix V4.20 -->
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="js/api-config.js"></script>
   <style>
@@ -293,27 +293,6 @@
 
   function currentAudioFileName(){
     return `${safeName(meetingIdOf(selectedMeeting)||'meeting')}_${new Date().toISOString().replace(/[:.]/g,'-')}.${fileExtension()}`;
-  }
-
-  async function postRecordsApi(payload){
-    if(!recordsApiUrl){
-      if(!saveRecordsApiConfig())throw new Error('ยังไม่ได้ตั้งค่า Smart Meeting Records API URL');
-    }
-    const response=await fetch(recordsApiUrl,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=UTF-8'},
-      body:JSON.stringify(payload),
-      redirect:'follow'
-    });
-    const raw=await response.text();
-    let data={};
-    try{data=raw?JSON.parse(raw):{};}catch{
-      throw new Error(`Records API ตอบกลับไม่ใช่ JSON (HTTP ${response.status})`);
-    }
-    if(!response.ok || data.success!==true){
-      throw new Error(data.message||data.error||`HTTP ${response.status}`);
-    }
-    return data;
   }
 
   async function uploadAudioToDrive(options={}){
